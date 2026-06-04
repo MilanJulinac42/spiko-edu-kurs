@@ -1,0 +1,21 @@
+{
+  "name": "spiko",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --cwd apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "build:api": "bun --cwd apps/api run build",
+    "build:web": "npm --workspace apps/web run build",
+    "db:generate": "bun --cwd apps/api run db:generate",
+    "db:migrate": "bun --cwd apps/api run db:migrate",
+    "db:push": "bun --cwd apps/api run db:push"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

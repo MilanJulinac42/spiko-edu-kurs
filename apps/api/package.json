@@ -1,0 +1,35 @@
+{
+  "name": "@spiko/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile dist/api",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@elysiajs/cors": "^1.1.1",
+    "@elysiajs/eden": "^1.1.3",
+    "@elysiajs/jwt": "^1.1.1",
+    "@elysiajs/swagger": "^1.1.6",
+    "@spiko/shared": "*",
+    "drizzle-orm": "^0.36.4",
+    "elysia": "^1.1.26",
+    "googleapis": "^144.0.0",
+    "jose": "^5.9.6",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.6.3"
+  }
+}

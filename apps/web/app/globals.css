@@ -1,0 +1,8 @@
+:root {
+  --bg: #0b0d10;
+  --fg: #f3f4f6;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+a { color: inherit; }
