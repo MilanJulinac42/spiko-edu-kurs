@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
 import { AuthForm } from '@/components/AuthForm'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <Suspense fallback={null}>
-      <AuthForm mode="login" />
+      <AuthForm mode="register" />
     </Suspense>
   )
 }
