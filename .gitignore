@@ -33,3 +33,6 @@ Thumbs.db
 
 # drizzle
 apps/api/drizzle/meta/_journal.json.bak
+
+# Claude local config
+.claude/

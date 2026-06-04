@@ -1,7 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
 import { supabase } from '@/lib/supabase'
 
 type Mode = 'login' | 'register'
@@ -29,116 +31,122 @@ export function AuthForm({ mode }: { mode: Mode }) {
           options: { data: { full_name: fullName } },
         })
         if (error) throw error
-        // Confirm email isključen → sesija odmah aktivna
-        router.replace('/onboarding')
+        router.replace('/dashboard')
         router.refresh()
+        return
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.replace(next)
-        router.refresh()
       }
+      router.replace(next)
+      router.refresh()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Greška pri autentifikaciji')
+      setError(e instanceof Error ? e.message : 'Greška')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'grid', gap: '0.85rem' }}>
-      <h1 style={{ margin: 0, fontSize: '1.6rem' }}>
-        {mode === 'register' ? 'Registracija' : 'Prijava'}
-      </h1>
+    <form onSubmit={onSubmit} className="space-y-5">
+      <div>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+          {mode === 'register' ? 'Napravi nalog' : 'Dobrodošla nazad'}
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          {mode === 'register'
+            ? 'Registruj se da kreneš sa svojim kursom.'
+            : 'Prijavi se da nastaviš svoj kurs.'}
+        </p>
+      </div>
 
       {mode === 'register' && (
-        <Field label="Ime i prezime">
-          <input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Marko Marković"
-            required
-            style={inputStyle}
-          />
-        </Field>
+        <Field
+          label="Ime i prezime"
+          type="text"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="Ana Janković"
+          required
+        />
       )}
 
-      <Field label="Email">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-          style={inputStyle}
-        />
-      </Field>
+      <Field
+        label="Email"
+        type="email"
+        value={email}
+        onChange={setEmail}
+        autoComplete="email"
+        required
+      />
 
-      <Field label="Lozinka">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-          style={inputStyle}
-        />
-      </Field>
+      <Field
+        label="Lozinka"
+        type="password"
+        value={password}
+        onChange={setPassword}
+        autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+        minLength={8}
+        required
+      />
 
       {error && (
-        <div style={{ color: '#ff6b6b', fontSize: '0.9rem' }}>{error}</div>
+        <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
       )}
 
-      <button type="submit" disabled={loading} style={buttonStyle}>
+      <Button type="submit" variant="primary" size="lg" disabled={loading} className="w-full">
         {loading
           ? 'Trenutak...'
           : mode === 'register'
             ? 'Registruj se'
             : 'Prijavi se'}
-      </button>
+      </Button>
 
-      <div style={{ fontSize: '0.9rem', opacity: 0.8, textAlign: 'center' }}>
+      <p className="text-center text-sm text-muted">
         {mode === 'register' ? (
           <>
-            Imaš nalog? <a href="/login">Prijavi se</a>
+            Već imaš nalog?{' '}
+            <Link href="/login" className="font-semibold text-primary-dark hover:underline">
+              Prijavi se
+            </Link>
           </>
         ) : (
           <>
-            Nemaš nalog? <a href="/register">Registruj se</a>
+            Nemaš nalog?{' '}
+            <Link href="/register" className="font-semibold text-primary-dark hover:underline">
+              Registruj se
+            </Link>
           </>
         )}
-      </div>
+      </p>
     </form>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  type,
+  value,
+  onChange,
+  ...rest
+}: {
+  label: string
+  type: string
+  value: string
+  onChange: (v: string) => void
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) {
   return (
-    <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.9rem' }}>
-      <span style={{ opacity: 0.8 }}>{label}</span>
-      {children}
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-ink/80">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-primary/15"
+        {...rest}
+      />
     </label>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  background: '#0b0d10',
-  border: '1px solid #2a323d',
-  color: '#f3f4f6',
-  padding: '0.7rem 0.85rem',
-  borderRadius: 8,
-  fontSize: '1rem',
-  outline: 'none',
-}
-
-const buttonStyle: React.CSSProperties = {
-  background: '#3b82f6',
-  border: 0,
-  color: 'white',
-  padding: '0.8rem 1rem',
-  borderRadius: 8,
-  fontSize: '1rem',
-  cursor: 'pointer',
-  fontWeight: 600,
 }

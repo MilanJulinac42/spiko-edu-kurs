@@ -1,10 +1,14 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED_PREFIXES = ['/dashboard', '/courses', '/ai']
-const AUTH_ROUTES = ['/login', '/register']
+const PUBLIC_PATHS = ['/login', '/_next', '/favicon.ico']
 
 export async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname
+  if (PUBLIC_PATHS.some((p) => path.startsWith(p))) {
+    return NextResponse.next()
+  }
+
   const res = NextResponse.next({ request: req })
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,26 +29,18 @@ export async function middleware(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const path = req.nextUrl.pathname
-  const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p))
-  const isAuthRoute = AUTH_ROUTES.some((p) => path.startsWith(p))
-
-  if (isProtected && !user) {
+  if (!user) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', path)
     return NextResponse.redirect(url)
   }
-  if (isAuthRoute && user) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
+
+  // Role provera ide kroz backend (/me vraća role).
+  // Frontend layout dodatno blokira ne-admin korisnike sa lepom porukom.
   return res
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

@@ -17,7 +17,7 @@ import { webhooksModule } from './modules/webhooks'
 export const app = new Elysia()
   .use(
     cors({
-      origin: env.FRONTEND_ORIGIN,
+      origin: env.FRONTEND_ORIGIN.split(',').map((s) => s.trim()),
       credentials: true,
     }),
   )

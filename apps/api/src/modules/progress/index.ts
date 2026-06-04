@@ -2,10 +2,10 @@ import Elysia, { t } from 'elysia'
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { lessonProgress } from '../../db/schema'
-import { entitlement } from '../../middleware/entitlement'
+import { auth } from '../../middleware/auth'
 
 export const progressModule = new Elysia({ prefix: '/progress' })
-  .use(entitlement)
+  .use(auth)
   .get('/resume', async ({ user }) => {
     const [row] = await db
       .select()
