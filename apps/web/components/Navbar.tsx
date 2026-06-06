@@ -9,9 +9,15 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 
-const navLinks = [
+const authedLinks = [
   { href: '/dashboard', label: 'Moj kurs' },
   { href: '/ai', label: 'AI asistent' },
+]
+
+const publicLinks = [
+  { href: '#kako-radi', label: 'Kako radi' },
+  { href: '#demo', label: 'Demo' },
+  { href: '#pricing', label: 'Pretplata' },
 ]
 
 export function Navbar() {
@@ -31,24 +37,22 @@ export function Navbar() {
       <Container className="flex h-16 items-center justify-between py-3">
         <Logo />
 
-        {session && (
-          <nav className="hidden items-center gap-8 lg:flex">
-            {navLinks.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className={cn(
-                  'text-sm font-medium transition-colors',
-                  pathname.startsWith(l.href)
-                    ? 'text-primary-dark'
-                    : 'text-ink/70 hover:text-primary-dark',
-                )}
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-        )}
+        <nav className="hidden items-center gap-8 lg:flex">
+          {(session ? authedLinks : publicLinks).map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className={cn(
+                'text-sm font-medium transition-colors',
+                session && pathname.startsWith(l.href)
+                  ? 'text-primary-dark'
+                  : 'text-ink/70 hover:text-primary-dark',
+              )}
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
           {session ? (
@@ -56,9 +60,14 @@ export function Navbar() {
               Odjava
             </Button>
           ) : (
-            <Button href="/login" variant="primary" size="md">
-              Prijava
-            </Button>
+            <>
+              <Button href="/login" variant="ghost" size="md">
+                Prijava
+              </Button>
+              <Button href="/register" variant="primary" size="md">
+                Probaj besplatno
+              </Button>
+            </>
           )}
         </div>
 
@@ -92,10 +101,10 @@ export function Navbar() {
         </button>
       </Container>
 
-      {open && session && (
+      {open && (
         <div className="border-t border-ink/5 bg-white lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
-            {navLinks.map((l) => (
+            {(session ? authedLinks : publicLinks).map((l) => (
               <a
                 key={l.href}
                 href={l.href}
@@ -105,9 +114,20 @@ export function Navbar() {
                 {l.label}
               </a>
             ))}
-            <Button onClick={signOut} variant="outline" size="lg" className="mt-2">
-              Odjava
-            </Button>
+            {session ? (
+              <Button onClick={signOut} variant="outline" size="lg" className="mt-2">
+                Odjava
+              </Button>
+            ) : (
+              <>
+                <Button href="/login" variant="outline" size="lg" className="mt-2">
+                  Prijava
+                </Button>
+                <Button href="/register" variant="primary" size="lg">
+                  Probaj besplatno
+                </Button>
+              </>
+            )}
           </Container>
         </div>
       )}
