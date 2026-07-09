@@ -39,3 +39,14 @@ export type ExercisePayload =
   | { type: 'fill_blank'; data: FillBlankPayload }
   | { type: 'matching'; data: MatchingPayload }
   | { type: 'ordering'; data: OrderingPayload }
+
+/**
+ * Klijent NIKAD ne sme da vidi tačne odgovore pre nego što submituje.
+ * Backend sklanja `correctOptionId`, `answers`, `pairs`, redosled `items`
+ * pre slanja na klijenta.
+ */
+export type ExercisePayloadForStudent =
+  | { type: 'multiple_choice'; data: Omit<MultipleChoicePayload, 'correctOptionId' | 'explanation'> }
+  | { type: 'fill_blank'; data: { template: string; blankCount: number } }
+  | { type: 'matching'; data: Omit<MatchingPayload, 'pairs'> }
+  | { type: 'ordering'; data: { question?: string; items: Array<{ id: string; text: string }> } }
