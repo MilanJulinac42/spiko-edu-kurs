@@ -51,12 +51,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
     <form onSubmit={onSubmit} className="space-y-5">
       <div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
-          {mode === 'register' ? 'Napravi nalog' : 'Dobrodošla nazad'}
+          {mode === 'register' ? 'Napravi nalog' : 'Pozdrav opet 👋'}
         </h1>
         <p className="mt-2 text-sm text-muted">
           {mode === 'register'
-            ? 'Registruj se da kreneš sa svojim kursom.'
-            : 'Prijavi se da nastaviš svoj kurs.'}
+            ? 'Registracija je brza — kreni za par sekundi.'
+            : 'Prijava za nastavak kursa.'}
         </p>
       </div>
 
@@ -80,15 +80,24 @@ export function AuthForm({ mode }: { mode: Mode }) {
         required
       />
 
-      <Field
-        label="Lozinka"
-        type="password"
-        value={password}
-        onChange={setPassword}
-        autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-        minLength={8}
-        required
-      />
+      <div>
+        <Field
+          label="Lozinka"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+          minLength={8}
+          required
+        />
+        {mode === 'login' && (
+          <div className="mt-1.5 text-right">
+            <Link href="/forgot" className="text-xs font-semibold text-primary-dark hover:underline">
+              Zaboravljena lozinka?
+            </Link>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">

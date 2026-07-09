@@ -1,8 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED_PREFIXES = ['/dashboard', '/courses', '/ai']
-const AUTH_ROUTES = ['/login', '/register']
+const PROTECTED_PREFIXES = ['/dashboard', '/courses', '/settings', '/progress', '/ponavljanje']
+// /forgot i /reset su izuzeci — neulogovan korisnik može da resetuje, ulogovan
+// može da menja lozinku (Supabase PASSWORD_RECOVERY event drži privremenu sesiju)
+const AUTH_ROUTES = ['/login', '/register', '/forgot']
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next({ request: req })
