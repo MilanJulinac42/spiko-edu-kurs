@@ -4,6 +4,11 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { CEFR } from '@spiko/shared'
 import { api } from '@/lib/api'
+import { EmptyState, EmptyIconBook } from '@/components/EmptyState'
+import { toast } from '@/components/toast'
+import { TableSkeleton } from '@/components/Skeleton'
+import { AiCourseGenerator } from '@/components/AiCourseGenerator'
+import { statusLabel } from '@/lib/status'
 
 type Course = {
   id: string
@@ -17,35 +22,63 @@ type Course = {
 
 export default function CoursesPage() {
   const [list, setList] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [showAi, setShowAi] = useState(false)
 
   async function reload() {
     const { data } = await api.admin.courses.get()
     if (Array.isArray(data)) setList(data as Course[])
+    setLoading(false)
   }
 
   useEffect(() => { reload() }, [])
 
   return (
     <div>
-      <div className="row between" style={{ marginBottom: '1.25rem' }}>
+      <div className="row between" style={{ marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h1 style={{ margin: 0 }}>Kursevi</h1>
-        <button className="btn" onClick={() => setShowNew(true)}>+ Novi kurs</button>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <button
+            className="btn secondary"
+            onClick={() => setShowAi(true)}
+            title="AI generiše strukturu kursa iz kratkog opisa"
+          >
+            ✨ Generiši sa AI
+          </button>
+          <button className="btn" onClick={() => setShowNew(true)}>+ Novi kurs</button>
+        </div>
       </div>
 
       {showNew && <NewCourseModal onClose={() => setShowNew(false)} onCreated={reload} />}
+      {showAi && <AiCourseGenerator onClose={() => setShowAi(false)} />}
 
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-        {list.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
-            Nema kurseva. Klikni "Novi kurs" iznad da napraviš prvi.
+        {loading ? (
+          <div className="table-wrap">
+            <TableSkeleton headers={['Naslov', 'Nivo', 'Jezik', 'Status', '']} rows={5} />
           </div>
+        ) : list.length === 0 ? (
+          <EmptyState
+            icon={<EmptyIconBook />}
+            title="Nema kurseva"
+            description="Napravi prvi kurs — sa AI za 30 sekundi, ili ručno korak po korak."
+            cta={
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button className="btn" onClick={() => setShowAi(true)}>
+                  ✨ Generiši sa AI
+                </button>
+                <button className="btn secondary" onClick={() => setShowNew(true)}>
+                  + Ručno
+                </button>
+              </div>
+            }
+          />
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead>
               <tr>
-                <th>Naslov</th>
-                <th>Slug</th>
+                <th style={{ width: '40%' }}>Naslov</th>
                 <th>Nivo</th>
                 <th>Jezik</th>
                 <th>Status</th>
@@ -55,18 +88,20 @@ export default function CoursesPage() {
             <tbody>
               {list.map((c) => (
                 <tr key={c.id}>
-                  <td><Link href={`/courses/${c.id}`} style={{ fontWeight: 500 }}>{c.title}</Link></td>
-                  <td style={{ color: 'var(--muted)' }}>{c.slug}</td>
+                  <td>
+                    <Link href={`/courses/${c.id}`} className="cell-title">{c.title}</Link>
+                    <span className="cell-sub">/{c.slug}</span>
+                  </td>
                   <td>{c.level ?? '—'}</td>
                   <td>{c.language ?? '—'}</td>
-                  <td><span className={`status-badge ${c.status}`}>{c.status}</span></td>
+                  <td><span className={`status-badge ${c.status}`}>{statusLabel(c.status)}</span></td>
                   <td style={{ textAlign: 'right' }}>
                     <Link href={`/courses/${c.id}`} className="btn ghost">Uredi →</Link>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
@@ -105,10 +140,13 @@ function NewCourseModal({ onClose, onCreated }: { onClose: () => void; onCreated
         status: 'draft',
       })
       if (error) throw new Error(String(error.value ?? error.status))
+      toast.success('Kurs napravljen', { description: title })
       onCreated()
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Greška')
+      const msg = e instanceof Error ? e.message : 'Greška'
+      setError(msg)
+      toast.error('Neuspelo kreiranje kursa', { description: msg })
     } finally {
       setSaving(false)
     }
@@ -120,9 +158,10 @@ function NewCourseModal({ onClose, onCreated }: { onClose: () => void; onCreated
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
         display: 'grid', placeItems: 'center', zIndex: 10,
+        padding: '0.5rem',
       }}
     >
-      <div className="panel" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 520 }}>
+      <div className="panel" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 520, maxHeight: 'calc(100dvh - 1rem)', overflowY: 'auto' }}>
         <h2 style={{ marginTop: 0 }}>Novi kurs</h2>
         <form onSubmit={submit} className="col">
           <label className="label">
