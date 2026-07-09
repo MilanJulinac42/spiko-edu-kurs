@@ -107,6 +107,16 @@ export const lessons = pgTable('lessons', {
   videoId: text('video_id'),
   videoReady: boolean('video_ready').notNull().default(false),
   durationSeconds: integer('duration_seconds'),
+  /**
+   * Redosled blokova sadržaja unutar lekcije.
+   * Niz tipova: ['video', 'text', 'exercises', 'audio'] u željenom redosledu.
+   * Ako je null/empty, koristi se default redosled (video → text → exercises).
+   */
+  contentOrder: jsonb('content_order').$type<Array<'video' | 'text' | 'exercises' | 'audio'>>(),
+  /** Audio URL za lesson-level audio blok (dijalog, slušanje). Bunny Storage CDN. */
+  audioUrl: text('audio_url'),
+  /** Naziv audio bloka koji student vidi (npr. "Dijalog u kafiću"). Opciono. */
+  audioTitle: text('audio_title'),
   createdAt: createdAt(),
 })
 
@@ -136,6 +146,10 @@ export const exercises = pgTable('exercises', {
   payload: jsonb('payload').notNull(),
   position: integer('position').notNull().default(0),
   status: text('status').notNull().default('draft'),
+  /** Audio URL koji se pušta iznad pitanja ("Slušaj pa odgovori" vežbe). Bunny Storage CDN. */
+  audioUrl: text('audio_url'),
+  /** Naziv audia uz vežbu koji student vidi (npr. "Slušaj dijalog"). Opciono. */
+  audioTitle: text('audio_title'),
   createdAt: createdAt(),
 })
 
@@ -235,6 +249,32 @@ export const aiMessages = pgTable('ai_messages', {
   content: text('content').notNull(),
   tokensIn: integer('tokens_in').notNull().default(0),
   tokensOut: integer('tokens_out').notNull().default(0),
+  createdAt: createdAt(),
+})
+
+// ---------- STUDENT NOTES & BOOKMARKS ----------
+export const lessonNotes = pgTable(
+  'lesson_notes',
+  {
+    id: id(),
+    userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+    lessonId: uuid('lesson_id').notNull().references(() => lessons.id, { onDelete: 'cascade' }),
+    body: text('body').notNull().default(''),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    userLessonUnique: uniqueIndex('lesson_notes_user_lesson_unique').on(t.userId, t.lessonId),
+  }),
+)
+
+export const vocabularyBookmarks = pgTable('vocabulary_bookmarks', {
+  id: id(),
+  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  lessonId: uuid('lesson_id').references(() => lessons.id, { onDelete: 'set null' }),
+  word: text('word').notNull(),
+  translation: text('translation'),
+  note: text('note'),
   createdAt: createdAt(),
 })
 

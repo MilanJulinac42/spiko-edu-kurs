@@ -13,6 +13,14 @@ export const ratingsModule = new Elysia({ prefix: '/ratings' })
     return agg
   })
   .use(auth)
+  .get('/me/by-course/:courseId', async ({ user, params }) => {
+    const [row] = await db
+      .select()
+      .from(ratings)
+      .where(and(eq(ratings.userId, user.userId), eq(ratings.courseId, params.courseId)))
+      .limit(1)
+    return row ?? null
+  })
   .post(
     '/',
     async ({ body, user }) => {
