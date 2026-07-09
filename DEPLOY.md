@@ -278,10 +278,13 @@ https://api.spikoedu.rs/webhooks/bunny
 
 ---
 
-## 📌 Buduće faze (nije u ovom deploy-u)
+## 📌 Roadmap posle deploy-a (buduće faze / aneksi)
 
-- Raiffeisen payment callback → `https://api.spikoedu.rs/payments/callback`
-- Google OAuth (`GOOGLE_*` env)
-- Email obaveštenja (`EMAIL_*` env, Resend)
-- Whisper transkript pipeline (OpenAI — ključ već postoji)
-- Zaseban `staging` Supabase projekat
+| Prioritet | Stavka | Detalj |
+|---|---|---|
+| **Uskoro** (pre javnog lansiranja) | **Email — Resend** | Brendiran transakcioni mejl (`spikoedu.rs`). Auth već radi preko Supabase, ali free limit ~3–4/sat → Resend pre pravih registracija. `EMAIL_*` env. |
+| **Aneks** | **Zakazivanje časova** | Google Calendar (Emin) + Zoom link. Booking termina → sync → Zoom poziv. |
+| **Kasnije** | **Raiffeisen naplata** | `https://api.spikoedu.rs/payments/callback` (HMAC). NIKAD Stripe. |
+| **Kasnije** | **Whisper transkript** | OpenAI ključ već postoji. |
+| **Faza „ko zna koja"** | **Google OAuth login** | `GOOGLE_*` env. |
+| **Kad krene naplata** | **Staging Supabase** | Odvojiti dev od prod baze. |

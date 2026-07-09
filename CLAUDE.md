@@ -80,12 +80,16 @@ Supabase free tier auto-pauzira posle 7 dana — `Restore project` u dashboard-u
 
 ## Out of scope (eksplicitno nije deo isporuke)
 
-Ako se pomenu:
-- Raiffeisen payment integration
-- Bookings + Google Calendar
-- Sertifikat PDF — **NEĆE biti izdavanja sertifikata** (eksplicitna odluka)
-- Email obaveštenja (Resend)
-- Google OAuth
-- Deploy (Railway, Cloudflare)
+Trenutna isporuka NE uključuje niže. **Sertifikat PDF — NEĆE biti izdavanja sertifikata** (trajna odluka, ne aneks).
 
-→ to su **buduće faze**, posebni aneksi ugovora.
+Ostalo su **buduće faze / posebni aneksi ugovora**, po prioritetu:
+
+| Prioritet | Stavka | Napomena |
+|---|---|---|
+| **Uskoro** (pre javnog lansiranja) | **Email — Resend** | Brendiran transakcioni mejl (`spikoedu.rs`). Auth mejlovi (potvrda/reset) VEĆ rade preko Supabase; free limit ~3–4/sat + generički brend → Resend pre pravih registracija. `EMAIL_*` env. |
+| **Aneks** | **Zakazivanje časova** | Ema drži termine na **Google Calendar**, pozive preko **Zoom-a**. Feature = booking + sync sa kalendarom + Zoom link. Zaseban veći posao. |
+| **Kasnije** | **Raiffeisen naplata** | Form-redirect + HMAC callback (`/payments/callback`). NIKAD Stripe. |
+| **Kasnije** | **Whisper transkript** | OpenAI ključ već postoji. |
+| **Faza „ko zna koja"** | **Google OAuth login** | Zasebno od Calendar-a. `GOOGLE_*` env. |
+
+Deploy: **Vercel** (web+admin) + **Railway** (api) + **Loopia** DNS — vidi `DEPLOY.md`.
