@@ -1,0 +1,16 @@
+# Ne kopiraj u Docker build context — smanjuje image + štiti tajne
+node_modules
+**/node_modules
+**/.next
+**/dist
+.git
+.github
+
+# Tajne — nikad u image
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Frontend build artefakti (API ih ne treba)
+**/.turbo
+**/coverage
