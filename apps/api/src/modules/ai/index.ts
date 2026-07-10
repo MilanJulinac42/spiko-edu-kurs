@@ -249,8 +249,11 @@ export const aiModule = new Elysia({ prefix: '/ai' })
             .orderBy(asc(exercises.position))
           const textSnippet = extractContextSnippet(l.content, l.type)
           const exSummary = summarizeExercises(exRows)
+          // Transkript videa (Whisper) — često glavni sadržaj lekcije
+          const transcript = (l.transcript ?? '').trim()
           const snippet = [
             textSnippet,
+            transcript ? `Transkript videa:\n${transcript.slice(0, 4000)}` : '',
             exSummary ? `Vežbe u lekciji:\n${exSummary}` : '',
           ]
             .filter(Boolean)

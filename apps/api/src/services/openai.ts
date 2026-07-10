@@ -1,10 +1,59 @@
-import OpenAI from 'openai'
+import OpenAI, { toFile } from 'openai'
 import { env } from '../env'
 
 const client = new OpenAI({ apiKey: env.OPENAI_API_KEY })
 
 export function isOpenAiConfigured(): boolean {
   return !!env.OPENAI_API_KEY
+}
+
+const WHISPER_MAX_BYTES = 25 * 1024 * 1024 // OpenAI limit
+
+/**
+ * Transkribuj video (Whisper) — povuče MP4 sa datog URL-a i vrati VTT titl +
+ * čist tekst. VTT ide na Bunny plejer (CC), tekst u bazu za tutor kontekst.
+ */
+export async function transcribeVideoWhisper(
+  mp4Url: string,
+  language?: string,
+): Promise<{ vtt: string; text: string }> {
+  const res = await fetch(mp4Url)
+  if (!res.ok) {
+    throw new Error(
+      `Ne mogu da povučem video (${res.status}). Proveri da je "MP4 Fallback" uključen u Bunny library-ju.`,
+    )
+  }
+  const buf = Buffer.from(await res.arrayBuffer())
+  if (buf.byteLength > WHISPER_MAX_BYTES) {
+    throw new Error(
+      `Video je prevelik za Whisper (${Math.round(buf.byteLength / 1024 / 1024)}MB > 25MB). Koristi kraći klip.`,
+    )
+  }
+  const file = await toFile(buf, 'audio.mp4', { type: 'video/mp4' })
+  const vtt = await client.audio.transcriptions.create({
+    file,
+    model: 'whisper-1',
+    response_format: 'vtt',
+    ...(language ? { language } : {}),
+  })
+  const vttStr = String(vtt)
+  return { vtt: vttStr, text: vttToPlainText(vttStr) }
+}
+
+/** VTT → čist tekst (skini WEBVTT header, cue brojeve, timestamp linije). */
+function vttToPlainText(vtt: string): string {
+  return vtt
+    .split('\n')
+    .filter(
+      (l) =>
+        l.trim() !== '' &&
+        !/^WEBVTT/i.test(l) &&
+        !/-->/.test(l) &&
+        !/^\d+$/.test(l.trim()),
+    )
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 const LANGUAGE_NAMES: Record<string, string> = {

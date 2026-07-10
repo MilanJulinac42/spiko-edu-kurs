@@ -13,6 +13,45 @@ export function signPlaybackUrl(videoId: string, userId: string, ttlSeconds = 60
 }
 
 /**
+ * Signed MP4 URL (token auth) — za server-side transkripciju (Whisper).
+ * Koristi 240p da fajl bude mali (Whisper limit 25MB). Zahteva da je u Bunny
+ * library-ju uključen "MP4 Fallback". Isti token šablon kao HLS playback.
+ */
+export function signedMp4Url(videoId: string, userId = 'transcribe-bot', resolution = '240p', ttlSeconds = 60 * 30) {
+  const expires = Math.floor(Date.now() / 1000) + ttlSeconds
+  const raw = `${env.BUNNY_TOKEN_AUTH_KEY}${videoId}${expires}${userId}`
+  const token = createHash('sha256').update(raw).digest('hex')
+  return `https://${env.BUNNY_CDN_HOSTNAME}/${videoId}/play_${resolution}.mp4?token=${token}&expires=${expires}&user_id=${userId}`
+}
+
+/**
+ * Okači VTT titl na Bunny Stream video → pojavi se CC dugme u plejeru.
+ * `vtt` je sirov WEBVTT string; Bunny prima base64 sadržaja.
+ */
+export async function uploadBunnyCaption(videoId: string, srclang: string, label: string, vtt: string) {
+  const res = await fetch(
+    `https://video.bunnycdn.com/library/${env.BUNNY_LIBRARY_ID}/videos/${videoId}/captions/${srclang}`,
+    {
+      method: 'POST',
+      headers: {
+        AccessKey: env.BUNNY_API_KEY,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        srclang,
+        label,
+        captionsFile: Buffer.from(vtt, 'utf-8').toString('base64'),
+      }),
+    },
+  )
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`bunny caption upload failed: ${res.status} ${body}`)
+  }
+}
+
+/**
  * Direct iframe embed URL (Bunny player) — koristimo dok ne implementiramo
  * sopstveni HLS plejer.
  */

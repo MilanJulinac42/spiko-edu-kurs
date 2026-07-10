@@ -16,7 +16,10 @@ import {
   fetchBunnyVideoStatus,
   getTusUploadAuth,
   listBunnyVideos,
+  signedMp4Url,
+  uploadBunnyCaption,
 } from '../../services/bunny'
+import { isOpenAiConfigured, transcribeVideoWhisper } from '../../services/openai'
 import {
   deleteAudio,
   deleteCourseThumbnail,
@@ -469,6 +472,7 @@ export const adminModule = new Elysia({ prefix: '/admin' })
           ),
           audioUrl: t.Union([t.String(), t.Null()]),
           audioTitle: t.Union([t.String(), t.Null()]),
+          transcript: t.Union([t.String(), t.Null()]),
         }),
       ),
     },
@@ -477,6 +481,53 @@ export const adminModule = new Elysia({ prefix: '/admin' })
     await db.delete(lessons).where(eq(lessons.id, params.id))
     return { ok: true }
   })
+  // ---------- WHISPER TRANSKRIPT (titl za video) ----------
+  // Ručni okidač: transkribuje video (Whisper) → VTT titl na Bunny plejer (CC)
+  // + čist tekst u lessons.transcript (AI tutor kontekst).
+  .post(
+    '/lessons/:id/transcribe',
+    async ({ params, status }) => {
+      if (!isOpenAiConfigured()) {
+        return status(400, { error: 'OpenAI ključ nije konfigurisan.' })
+      }
+      const [l] = await db
+        .select({
+          id: lessons.id,
+          videoId: lessons.videoId,
+          videoReady: lessons.videoReady,
+          language: courses.language,
+        })
+        .from(lessons)
+        .leftJoin(modules, eq(modules.id, lessons.moduleId))
+        .leftJoin(courses, eq(courses.id, modules.courseId))
+        .where(eq(lessons.id, params.id))
+        .limit(1)
+
+      if (!l) return status(404, { error: 'lekcija ne postoji' })
+      if (!l.videoId) return status(400, { error: 'lekcija nema video za transkripciju' })
+      if (!l.videoReady) return status(400, { error: 'video još nije spreman (u obradi)' })
+
+      const lang = l.language || 'de'
+      try {
+        const mp4Url = signedMp4Url(l.videoId)
+        const { vtt, text } = await transcribeVideoWhisper(mp4Url, lang)
+
+        // Titl na plejer — best-effort (ako padne, tekst svejedno čuvamo)
+        let captionOnPlayer = true
+        try {
+          await uploadBunnyCaption(l.videoId, lang, lang.toUpperCase(), vtt)
+        } catch {
+          captionOnPlayer = false
+        }
+
+        await db.update(lessons).set({ transcript: text }).where(eq(lessons.id, l.id))
+        return { transcript: text, captionOnPlayer }
+      } catch (e) {
+        return status(422, { error: e instanceof Error ? e.message : 'transkripcija nije uspela' })
+      }
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
   // ---------- REORDER (bulk position update) ----------
   .post(
     '/reorder/modules',

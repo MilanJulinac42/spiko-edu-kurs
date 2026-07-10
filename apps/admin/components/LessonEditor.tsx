@@ -423,6 +423,12 @@ export function LessonEditor({
                               Direktan upload na Bunny (TUS). Webhook flag-uje <code>video_ready</code> kad
                               transcoding završi.
                             </p>
+                            {videoId && (
+                              <TranscriptPanel
+                                lessonId={effectiveLessonId}
+                                initialTranscript={lesson?.transcript ?? null}
+                              />
+                            )}
                           </SortableSection>
                         )
                       }
@@ -818,6 +824,109 @@ function SortableSection({
       </div>
       {!collapsed && <div style={{ padding: '1rem' }}>{children}</div>}
     </section>
+  )
+}
+
+/* ───────── Transkript (Whisper titl) panel ───────── */
+
+function TranscriptPanel({
+  lessonId,
+  initialTranscript,
+}: {
+  lessonId: string | null
+  initialTranscript: string | null
+}) {
+  const [transcript, setTranscript] = useState(initialTranscript ?? '')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  const boxStyle: React.CSSProperties = {
+    marginTop: '0.85rem',
+    padding: '0.85rem',
+    background: 'var(--surface-2)',
+    border: '1px solid var(--border)',
+    borderRadius: 10,
+  }
+
+  if (!lessonId) {
+    return (
+      <div style={boxStyle}>
+        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+          🎬 Sačuvaj lekciju pa možeš da generišeš titl (Whisper).
+        </p>
+      </div>
+    )
+  }
+
+  async function generate() {
+    setBusy(true)
+    setErr(null)
+    setMsg(null)
+    try {
+      const { data, error } = await api.admin.lessons({ id: lessonId! }).transcribe.post()
+      if (error) {
+        const val = (error as { value?: { error?: string }; status?: number }).value
+        throw new Error(val?.error ?? `Greška ${(error as { status?: number }).status ?? ''}`)
+      }
+      const r = data as { transcript: string; captionOnPlayer: boolean }
+      setTranscript(r.transcript)
+      setMsg(
+        r.captionOnPlayer
+          ? '✓ Titl generisan i okačen na plejer (CC dugme).'
+          : '✓ Transkript sačuvan. Titl na plejer nije uspeo — proveri Bunny library.',
+      )
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Transkripcija nije uspela')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function save() {
+    setBusy(true)
+    setErr(null)
+    try {
+      await api.admin.lessons({ id: lessonId! }).patch({ transcript: transcript.trim() || null })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setErr('Greška pri čuvanju')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={boxStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+        <strong style={{ fontSize: '0.82rem' }}>🎬 Titl / transkript videa</strong>
+        <button className="btn secondary" onClick={generate} disabled={busy}>
+          {busy ? 'Radim…' : transcript ? 'Ponovo generiši' : 'Generiši titl (Whisper)'}
+        </button>
+        {transcript && (
+          <button className="btn ghost" onClick={save} disabled={busy}>
+            {saved ? '✓ Sačuvano' : 'Sačuvaj izmene'}
+          </button>
+        )}
+      </div>
+      <p style={{ margin: '0.4rem 0 0', fontSize: '0.72rem', color: 'var(--muted)' }}>
+        Whisper transkribuje video → titl ide na plejer (CC) + tekst se čuva za AI tutor kontekst.
+        Video mora biti spreman. Možeš ručno da doteraš tekst pre snimanja.
+      </p>
+      {err && <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: 'var(--danger)' }}>{err}</p>}
+      {msg && <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: 'var(--success)' }}>{msg}</p>}
+      {transcript && (
+        <textarea
+          className="input"
+          value={transcript}
+          onChange={(e) => setTranscript(e.target.value)}
+          rows={5}
+          style={{ marginTop: '0.6rem', width: '100%', resize: 'vertical', fontSize: '0.82rem', lineHeight: 1.5 }}
+        />
+      )}
+    </div>
   )
 }
 

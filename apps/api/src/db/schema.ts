@@ -117,6 +117,8 @@ export const lessons = pgTable('lessons', {
   audioUrl: text('audio_url'),
   /** Naziv audio bloka koji student vidi (npr. "Dijalog u kafiću"). Opciono. */
   audioTitle: text('audio_title'),
+  /** Transkript videa (Whisper) — čist tekst, koristi se za AI tutor kontekst. */
+  transcript: text('transcript'),
   createdAt: createdAt(),
 })
 

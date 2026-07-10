@@ -24,6 +24,7 @@ export type Lesson = {
   contentOrder?: Array<'video' | 'text' | 'exercises' | 'audio'> | null
   audioUrl?: string | null
   audioTitle?: string | null
+  transcript?: string | null
 }
 
 export type Module = {
