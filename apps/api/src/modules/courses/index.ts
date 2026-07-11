@@ -165,10 +165,12 @@ export const coursesModule = new Elysia({ prefix: '/courses' })
   // Detalj jednog kursa po slug-u — vraća modules + lessons + per-lesson progress
   // + stats + resumeLessonId. Koristi se za /courses/:slug stranicu.
   .get('/:slug', async ({ params, status, user }) => {
+    // Admin "Pregled kao student" — vidi i draft/hidden; student samo objavljeno.
+    const isAdmin = user.role === 'admin'
     const [course] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.slug, params.slug), eq(courses.status, 'published')))
+      .where(and(eq(courses.slug, params.slug), isAdmin ? undefined : eq(courses.status, 'published')))
       .limit(1)
     if (!course) return status(404, { error: 'not found' })
 
@@ -183,7 +185,7 @@ export const coursesModule = new Elysia({ prefix: '/courses' })
       ? await db
           .select()
           .from(lessons)
-          .where(and(inArray(lessons.moduleId, moduleIds), eq(lessons.status, 'published')))
+          .where(and(inArray(lessons.moduleId, moduleIds), isAdmin ? undefined : eq(lessons.status, 'published')))
           .orderBy(asc(lessons.position))
       : []
 
@@ -252,12 +254,14 @@ export const coursesModule = new Elysia({ prefix: '/courses' })
   })
   // Lekcija — za sad samo auth; entitlement (subscription gate) dodaje se uz billing
   .get('/lessons/:id', async ({ params, status, user }) => {
+    // Admin "Pregled kao student" vidi i draft/hidden lekcije.
+    const isAdmin = user.role === 'admin'
     const [lesson] = await db
       .select()
       .from(lessons)
       .where(eq(lessons.id, params.id))
       .limit(1)
-    if (!lesson || lesson.status !== 'published') {
+    if (!lesson || (lesson.status !== 'published' && !isAdmin)) {
       return status(404, { error: 'not found' })
     }
 
@@ -306,7 +310,7 @@ export const coursesModule = new Elysia({ prefix: '/courses' })
     const lessonExercises = await db
       .select()
       .from(exercises)
-      .where(and(eq(exercises.lessonId, lesson.id), eq(exercises.status, 'published')))
+      .where(and(eq(exercises.lessonId, lesson.id), isAdmin ? undefined : eq(exercises.status, 'published')))
       .orderBy(asc(exercises.position))
 
     const exercisesForStudent = lessonExercises.map((e) => ({
