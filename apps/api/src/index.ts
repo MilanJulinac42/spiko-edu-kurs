@@ -5,6 +5,7 @@ import { env, PORT } from './env'
 import { adminModule } from './modules/admin'
 import { aiModule } from './modules/ai'
 import { authModule } from './modules/auth'
+import { googleAuthModule } from './modules/auth-google'
 import { bookingsModule } from './modules/bookings'
 import { commentsModule } from './modules/comments'
 import { coursesModule } from './modules/courses'
@@ -80,6 +81,7 @@ export const app = new Elysia()
   })
   .get('/health', () => ({ ok: true }))
   .use(authModule)
+  .use(googleAuthModule)
   .use(notesModule)
   .use(subscriptionsModule)
   .use(coursesModule)

@@ -7,7 +7,9 @@ import {
   lessons,
   modules,
   profiles,
+  teachers,
 } from '../../db/schema'
+import { getConsentUrl, isGoogleConfigured } from '../../services/google'
 import { requireRole } from '../../middleware/requireRole'
 import {
   bunnyThumbnailUrl,
@@ -110,6 +112,30 @@ async function nextExercisePosition(lessonId: string) {
 
 export const adminModule = new Elysia({ prefix: '/admin' })
   .use(requireRole('admin'))
+  // ---------- GOOGLE CALENDAR (poveži Emin nalog) ----------
+  // Vrati consent URL; osigurava da teacher red postoji za ovog admina.
+  .get('/google/connect', async ({ user, status }) => {
+    if (!isGoogleConfigured()) return status(400, { error: 'Google OAuth nije konfigurisan (GOOGLE_* env).' })
+    let [teacher] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.profileId, user.userId)).limit(1)
+    if (!teacher) {
+      ;[teacher] = await db.insert(teachers).values({ profileId: user.userId }).returning({ id: teachers.id })
+    }
+    return { url: getConsentUrl(teacher.id) }
+  })
+  // Da li je Google kalendar povezan za ovog admina?
+  .get('/google/status', async ({ user }) => {
+    const [teacher] = await db
+      .select({ connected: teachers.googleRefreshToken })
+      .from(teachers)
+      .where(eq(teachers.profileId, user.userId))
+      .limit(1)
+    return { connected: !!teacher?.connected, configured: isGoogleConfigured() }
+  })
+  // Otkači Google (obriši sačuvani token)
+  .delete('/google', async ({ user }) => {
+    await db.update(teachers).set({ googleRefreshToken: null }).where(eq(teachers.profileId, user.userId))
+    return { ok: true }
+  })
   /**
    * Pošalji nazad Bunny video-ready event-ove od `since` timestamp-a.
    * Admin client poll-uje ovo svakih ~20s i prikazuje toast po novom event-u.

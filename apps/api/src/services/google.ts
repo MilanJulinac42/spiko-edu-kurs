@@ -9,6 +9,28 @@ export function makeOAuthClient() {
   )
 }
 
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+
+/** Consent URL — `state` nosi teacherId da callback zna čiji je token. */
+export function getConsentUrl(state: string): string {
+  return makeOAuthClient().generateAuthUrl({
+    access_type: 'offline', // daje refresh_token
+    prompt: 'consent', // forsira refresh_token na svakom povezivanju
+    scope: [CALENDAR_SCOPE],
+    state,
+  })
+}
+
+/** Razmeni auth code za refresh token (posle Google redirect-a na callback). */
+export async function exchangeCodeForRefreshToken(code: string): Promise<string | null> {
+  const { tokens } = await makeOAuthClient().getToken(code)
+  return tokens.refresh_token ?? null
+}
+
+export function isGoogleConfigured(): boolean {
+  return !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET
+}
+
 type Teacher = { id: string; googleRefreshToken: string | null }
 
 type EventInput = {
