@@ -3,7 +3,8 @@ import { and, eq, gte } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { availabilitySlots, bookings, teachers } from '../../db/schema'
 import { entitlement } from '../../middleware/entitlement'
-import { createMeetEvent } from '../../services/google'
+import { createCalendarEvent } from '../../services/google'
+import { createZoomMeeting, isZoomConfigured } from '../../services/zoom'
 
 export const bookingsModule = new Elysia({ prefix: '/bookings' })
   .use(entitlement)
@@ -41,12 +42,43 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
         .limit(1)
       if (!teacher) return status(404, { error: 'teacher not found' })
 
-      const event = await createMeetEvent({
-        teacher,
-        studentId: user.userId,
-        startAt: slot.startAt,
-        endAt: slot.endAt,
-      })
+      if (!isZoomConfigured()) {
+        return status(503, { error: 'Zoom nije konfigurisan — zakazivanje trenutno nedostupno.' })
+      }
+
+      const durationMin = Math.max(
+        15,
+        Math.round((slot.endAt.getTime() - slot.startAt.getTime()) / 60000),
+      )
+
+      // 1) Zoom sastanak (obavezan — to je sam poziv)
+      let zoom
+      try {
+        zoom = await createZoomMeeting({
+          topic: 'Spiko Edu — čas',
+          startAt: slot.startAt,
+          durationMinutes: durationMin,
+        })
+      } catch {
+        return status(502, { error: 'Zoom sastanak nije mogao da se napravi. Pokušaj ponovo.' })
+      }
+
+      // 2) Google Calendar event sa Zoom linkom (best-effort — ne ruši booking)
+      let googleEventId: string | null = null
+      if (teacher.googleRefreshToken) {
+        try {
+          const ev = await createCalendarEvent({
+            teacher,
+            startAt: slot.startAt,
+            endAt: slot.endAt,
+            zoomJoinUrl: zoom.joinUrl,
+            studentEmail: user.email,
+          })
+          googleEventId = ev.id
+        } catch {
+          /* kalendar nije uspeo — poziv i dalje postoji preko Zoom linka */
+        }
+      }
 
       const [booking] = await db
         .insert(bookings)
@@ -55,8 +87,9 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
           studentId: user.userId,
           teacherId: teacher.id,
           status: 'confirmed',
-          googleEventId: event.id,
-          meetLink: event.meetLink,
+          googleEventId,
+          meetLink: zoom.joinUrl,
+          zoomMeetingId: zoom.meetingId,
         })
         .returning()
 

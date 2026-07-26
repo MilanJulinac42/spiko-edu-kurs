@@ -38,6 +38,13 @@ const EnvSchema = t.Object({
   OPENAI_API_KEY: t.String({ default: '' }),
   OPENAI_MODEL: t.String({ default: 'gpt-4o-mini' }),
 
+  // Zoom Server-to-Server OAuth — pravljenje sastanaka za zakazane časove.
+  ZOOM_ACCOUNT_ID: t.String({ default: '' }),
+  ZOOM_CLIENT_ID: t.String({ default: '' }),
+  ZOOM_CLIENT_SECRET: t.String({ default: '' }),
+  // Email Zoom naloga koji hostuje pozive (sastanak se pravi u ime tog korisnika).
+  ZOOM_HOST_EMAIL: t.String({ default: '' }),
+
   // Anti password-sharing: max broj aktivnih uređaja/sesija po nalogu.
   // 1 = jedna sesija (najstroze), 2 = telefon+laptop (default). Nova preko limita
   // izbaci najstariju. Prazno/0 = isključeno (bez ograničenja).

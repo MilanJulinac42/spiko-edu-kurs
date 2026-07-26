@@ -193,7 +193,10 @@ export const bookings = pgTable('bookings', {
   teacherId: uuid('teacher_id').notNull().references(() => teachers.id),
   status: text('status').notNull().default('confirmed'),
   googleEventId: text('google_event_id'),
+  /** Zoom join URL (upisan i u kalendar event). */
   meetLink: text('meet_link'),
+  /** Zoom meeting id — za otkazivanje/brisanje sastanka. */
+  zoomMeetingId: text('zoom_meeting_id'),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
   createdAt: createdAt(),
 })

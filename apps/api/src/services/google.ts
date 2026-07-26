@@ -31,16 +31,31 @@ export function isGoogleConfigured(): boolean {
   return !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET
 }
 
-type Teacher = { id: string; googleRefreshToken: string | null }
+type Teacher = { googleRefreshToken: string | null }
 
-type EventInput = {
+type CalendarEventInput = {
   teacher: Teacher
-  studentId: string
   startAt: Date
   endAt: Date
+  /** Zoom join link — ide u lokaciju + opis eventa (klik = poziv). */
+  zoomJoinUrl: string
+  /** Email polaznika — dodaje se kao gost na event. */
+  studentEmail: string | null
+  summary?: string
 }
 
-export async function createMeetEvent({ teacher, startAt, endAt }: EventInput) {
+/**
+ * Napravi Google Calendar event na Eminom kalendaru sa Zoom linkom.
+ * Zoom link ide u `location` + opis, polaznik kao gost. Vraća event id.
+ */
+export async function createCalendarEvent({
+  teacher,
+  startAt,
+  endAt,
+  zoomJoinUrl,
+  studentEmail,
+  summary = 'Spiko Edu — čas',
+}: CalendarEventInput): Promise<{ id: string }> {
   if (!teacher.googleRefreshToken) {
     throw new Error('teacher google not connected')
   }
@@ -50,24 +65,29 @@ export async function createMeetEvent({ teacher, startAt, endAt }: EventInput) {
 
   const res = await calendar.events.insert({
     calendarId: 'primary',
-    conferenceDataVersion: 1,
+    sendUpdates: 'all', // pošalji poziv gostu (polazniku)
     requestBody: {
-      summary: 'Spiko Edu — konverzacija',
+      summary,
+      location: zoomJoinUrl,
+      description: `Pridruži se času preko Zoom-a:\n${zoomJoinUrl}`,
       start: { dateTime: startAt.toISOString() },
       end: { dateTime: endAt.toISOString() },
-      conferenceData: {
-        createRequest: {
-          requestId: `spiko-${teacher.id}-${startAt.getTime()}`,
-          conferenceSolutionKey: { type: 'hangoutsMeet' },
-        },
-      },
+      ...(studentEmail ? { attendees: [{ email: studentEmail }] } : {}),
     },
   })
 
-  const meetLink =
-    res.data.hangoutLink ??
-    res.data.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ??
-    null
+  return { id: res.data.id! }
+}
 
-  return { id: res.data.id!, meetLink: meetLink ?? '' }
+/** Obriši kalendar event (pri otkazivanju termina). Best-effort. */
+export async function deleteCalendarEvent(teacher: Teacher, eventId: string): Promise<void> {
+  if (!teacher.googleRefreshToken) return
+  const oauth = makeOAuthClient()
+  oauth.setCredentials({ refresh_token: teacher.googleRefreshToken })
+  const calendar = google.calendar({ version: 'v3', auth: oauth })
+  try {
+    await calendar.events.delete({ calendarId: 'primary', eventId, sendUpdates: 'all' })
+  } catch {
+    /* best-effort */
+  }
 }

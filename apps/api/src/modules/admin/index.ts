@@ -2,6 +2,8 @@ import Elysia, { t } from 'elysia'
 import { and, asc, eq, inArray, isNull, max } from 'drizzle-orm'
 import { db } from '../../db/client'
 import {
+  availabilitySlots,
+  bookings,
   courses,
   exercises,
   lessons,
@@ -10,6 +12,7 @@ import {
   teachers,
 } from '../../db/schema'
 import { getConsentUrl, isGoogleConfigured } from '../../services/google'
+import { isZoomConfigured } from '../../services/zoom'
 import { requireRole } from '../../middleware/requireRole'
 import {
   bunnyThumbnailUrl,
@@ -135,6 +138,66 @@ export const adminModule = new Elysia({ prefix: '/admin' })
   .delete('/google', async ({ user }) => {
     await db.update(teachers).set({ googleRefreshToken: null }).where(eq(teachers.profileId, user.userId))
     return { ok: true }
+  })
+  // ---------- TERMINI (availability) ----------
+  // Lista termina ovog nastavnika (svi statusi) + broj rezervacija.
+  .get('/availability', async ({ user }) => {
+    const [teacher] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.profileId, user.userId)).limit(1)
+    if (!teacher) return { teacherId: null, slots: [], zoomReady: isZoomConfigured() }
+    const slots = await db
+      .select()
+      .from(availabilitySlots)
+      .where(eq(availabilitySlots.teacherId, teacher.id))
+      .orderBy(asc(availabilitySlots.startAt))
+    return { teacherId: teacher.id, slots, zoomReady: isZoomConfigured() }
+  })
+  // Dodaj termin (start/end ISO). Kreira teacher red ako ne postoji.
+  .post(
+    '/availability',
+    async ({ user, body, status }) => {
+      const start = new Date(body.startAt)
+      const end = new Date(body.endAt)
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+        return status(400, { error: 'neispravno vreme' })
+      }
+      let [teacher] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.profileId, user.userId)).limit(1)
+      if (!teacher) {
+        ;[teacher] = await db.insert(teachers).values({ profileId: user.userId }).returning({ id: teachers.id })
+      }
+      const [slot] = await db
+        .insert(availabilitySlots)
+        .values({ teacherId: teacher.id, startAt: start, endAt: end, status: 'open' })
+        .returning()
+      return slot
+    },
+    { body: t.Object({ startAt: t.String(), endAt: t.String() }) },
+  )
+  // Obriši termin (samo ako nije rezervisan)
+  .delete('/availability/:id', async ({ params, status }) => {
+    const [slot] = await db.select().from(availabilitySlots).where(eq(availabilitySlots.id, params.id)).limit(1)
+    if (!slot) return status(404, { error: 'termin ne postoji' })
+    if (slot.status === 'booked') return status(409, { error: 'termin je rezervisan — otkaži rezervaciju prvo' })
+    await db.delete(availabilitySlots).where(eq(availabilitySlots.id, params.id))
+    return { ok: true }
+  })
+  // Lista rezervacija ovog nastavnika (za pregled)
+  .get('/bookings', async ({ user }) => {
+    const [teacher] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.profileId, user.userId)).limit(1)
+    if (!teacher) return []
+    return db
+      .select({
+        id: bookings.id,
+        status: bookings.status,
+        meetLink: bookings.meetLink,
+        startAt: availabilitySlots.startAt,
+        endAt: availabilitySlots.endAt,
+        studentName: profiles.fullName,
+      })
+      .from(bookings)
+      .leftJoin(availabilitySlots, eq(availabilitySlots.id, bookings.slotId))
+      .leftJoin(profiles, eq(profiles.id, bookings.studentId))
+      .where(eq(bookings.teacherId, teacher.id))
+      .orderBy(asc(availabilitySlots.startAt))
   })
   /**
    * Pošalji nazad Bunny video-ready event-ove od `since` timestamp-a.
