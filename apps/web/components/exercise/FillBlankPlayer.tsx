@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Data = {
   template: string
@@ -10,6 +10,8 @@ type Data = {
 type Result = {
   details: unknown
 }
+
+const DE_CHARS = ['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü']
 
 export function FillBlankPlayer({
   payload,
@@ -23,6 +25,8 @@ export function FillBlankPlayer({
   result: Result | null
 }) {
   const [filled, setFilled] = useState<string[]>(() => Array(payload.blankCount).fill(''))
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const activeIdx = useRef<number>(0)
 
   useEffect(() => {
     onAnswers({ filled })
@@ -34,6 +38,27 @@ export function FillBlankPlayer({
   const perBlank = details?.perBlank ?? []
 
   const parts = payload.template.split('___')
+
+  // Ubaci nemački znak na poziciju kursora u trenutno fokusiranom polju
+  function insertChar(ch: string) {
+    const idx = activeIdx.current
+    const el = inputRefs.current[idx]
+    if (!el) return
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? start
+    const cur = el.value
+    const next = cur.slice(0, start) + ch + cur.slice(end)
+    setFilled((f) => {
+      const n = [...f]
+      n[idx] = next
+      return n
+    })
+    requestAnimationFrame(() => {
+      el.focus()
+      const pos = start + ch.length
+      el.setSelectionRange(pos, pos)
+    })
+  }
 
   return (
     <div>
@@ -52,11 +77,35 @@ export function FillBlankPlayer({
                 index={i}
                 locked={locked}
                 grade={perBlank[i]}
+                registerRef={(el) => {
+                  inputRefs.current[i] = el
+                }}
+                onFocus={() => {
+                  activeIdx.current = i
+                }}
               />
             )}
           </span>
         ))}
       </p>
+
+      {/* Traka za nemačke znakove — klik ubaci u polje na koje si zadnje kliknuo */}
+      {!locked && (
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs text-muted">Nemačka slova:</span>
+          {DE_CHARS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()} /* ne gubi fokus polja */
+              onClick={() => insertChar(c)}
+              className="grid h-8 min-w-[2rem] place-items-center rounded-lg border border-ink/15 bg-white px-1 font-semibold text-ink transition-colors hover:border-primary hover:bg-primary/5"
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -67,12 +116,16 @@ function BlankInput({
   index,
   locked,
   grade,
+  registerRef,
+  onFocus,
 }: {
   value: string
   onChange: (v: string) => void
   index: number
   locked: boolean
   grade?: { correct: boolean; expected: string }
+  registerRef: (el: HTMLInputElement | null) => void
+  onFocus: () => void
 }) {
   const isCorrect = locked && grade?.correct
   const isWrong = locked && grade?.correct === false
@@ -81,6 +134,8 @@ function BlankInput({
     <span className="inline-block align-baseline mx-1">
       <span className="relative inline-block">
         <input
+          ref={registerRef}
+          onFocus={onFocus}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}

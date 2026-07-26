@@ -4,6 +4,22 @@ import type {
 } from '@spiko/shared'
 
 /**
+ * Nemačka tolerancija na tastaturi: ä=ae, ö=oe, ü=ue, ß=ss (standardna
+ * transliteracija). Tako student na srpskoj/engleskoj tastaturi može da ukuca
+ * "Maedchen" umesto "Mädchen" i svejedno bude tačno.
+ */
+function foldGerman(s: string): string {
+  return s
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/Ä/g, 'Ae')
+    .replace(/Ö/g, 'Oe')
+    .replace(/Ü/g, 'Ue')
+    .replace(/ß/g, 'ss')
+}
+
+/**
  * Sklanja tačne odgovore iz payload-a pre slanja klijentu.
  * Student vidi samo pitanje + opcije (izmešane gde treba).
  */
@@ -76,8 +92,17 @@ export function grade(
       const perBlank = blanks.map((b, i) => {
         const given = filled[i] ?? ''
         const cs = b.caseSensitive ?? false
-        const normGiven = cs ? given.trim() : given.trim().toLowerCase()
-        const ok = b.accepted.some((acc) => (cs ? acc : acc.toLowerCase()) === normGiven)
+        const norm = (x: string) => {
+          const t = cs ? x.trim() : x.trim().toLowerCase()
+          return { exact: t, folded: foldGerman(t) }
+        }
+        const g = norm(given)
+        // Tačno ako se poklapa direktno ILI posle nemačke folded transliteracije
+        // (ä=ae…), pa "Maedchen" == "Mädchen".
+        const ok = b.accepted.some((acc) => {
+          const a = norm(acc)
+          return a.exact === g.exact || a.folded === g.folded
+        })
         if (ok) correctCount++
         return { correct: ok, expected: b.accepted[0] }
       })
