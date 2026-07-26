@@ -345,6 +345,31 @@ const DOW = [
   { n: 0, l: 'Nedelja' },
 ]
 
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINS_15 = ['00', '15', '30', '45']
+
+/** 24h izbor vremena (00–23 : 00/15/30/45) — bez AM/PM, bez native pickera. */
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = (value || '00:00').split(':')
+  const mins = MINS_15.includes(m) ? MINS_15 : [m, ...MINS_15]
+  const sel: React.CSSProperties = { width: 58, padding: '0.35rem 0.3rem', textAlign: 'center' }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      <select className="input" value={h} onChange={(e) => onChange(`${e.target.value}:${m}`)} style={sel}>
+        {HOURS_24.map((x) => (
+          <option key={x} value={x}>{x}</option>
+        ))}
+      </select>
+      <span style={{ fontWeight: 700 }}>:</span>
+      <select className="input" value={m} onChange={(e) => onChange(`${h}:${e.target.value}`)} style={sel}>
+        {mins.map((x) => (
+          <option key={x} value={x}>{x}</option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
 /** Editor radnog vremena po danima u nedelji + trajanje časa. */
 function WeeklyHoursEditor() {
   const [rules, setRules] = useState<Record<string, Range[]>>({})
@@ -415,10 +440,10 @@ function WeeklyHoursEditor() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   {rs.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <input className="input" type="time" value={r.start} onChange={(e) => setDay(n, rs.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} style={{ width: 110 }} />
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <TimeSelect value={r.start} onChange={(v) => setDay(n, rs.map((x, j) => (j === i ? { ...x, start: v } : x)))} />
                       <span>–</span>
-                      <input className="input" type="time" value={r.end} onChange={(e) => setDay(n, rs.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} style={{ width: 110 }} />
+                      <TimeSelect value={r.end} onChange={(v) => setDay(n, rs.map((x, j) => (j === i ? { ...x, end: v } : x)))} />
                       <button className="btn ghost" style={{ padding: '0.2rem 0.45rem', color: 'var(--danger)' }} onClick={() => setDay(n, rs.filter((_, j) => j !== i))} title="Ukloni">×</button>
                     </div>
                   ))}
