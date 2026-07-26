@@ -1,9 +1,8 @@
 /**
  * Podaci o trgovcu (merchant) — jedno mesto za sve pravne stranice i footer.
  *
- * Zvanični podaci firme popunjeni (APR registracija). Jedino `vatRegistered`
- * ostaje null (neutralna formulacija cena) dok se ne potvrdi PDV status —
- * preduzetnik-paušalac obično NIJE u sistemu PDV-a.
+ * Zvanični podaci firme popunjeni (APR registracija). Preduzetnik koji vodi
+ * poslovne knjige, VAN sistema PDV-a (vatRegistered=false) → cene ne sadrže PDV.
  *
  * Raiffeisen merchant + srpski zakon (Zakon o zaštiti potrošača, ZZPL)
  * zahtevaju da identitet trgovca bude jasno vidljiv na sajtu.
@@ -34,7 +33,7 @@ export const MERCHANT = {
   /** Kontakt telefon */
   phone: '+381 62 9611743',
   /** Da li je trgovac u sistemu PDV-a — utiče na formulaciju cena */
-  vatRegistered: null as boolean | null, // null = neutralna formulacija dok se ne odluči
+  vatRegistered: false as boolean | null, // preduzetnik koji vodi knjige, van sistema PDV-a
   /** Valuta naplate — Raiffeisen naplaćuje u RSD */
   currency: 'RSD',
 } as const
