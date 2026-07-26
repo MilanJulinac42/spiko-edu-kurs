@@ -3,8 +3,32 @@ import { and, eq, gte, isNotNull } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { availabilitySlots, bookings, teachers } from '../../db/schema'
 import { auth } from '../../middleware/auth'
-import { createCalendarEvent, getBusyIntervals } from '../../services/google'
-import { createZoomMeeting, isZoomConfigured } from '../../services/zoom'
+import { createCalendarEvent, deleteCalendarEvent, getBusyIntervals } from '../../services/google'
+import { createZoomMeeting, deleteZoomMeeting, isZoomConfigured } from '../../services/zoom'
+
+/**
+ * Otkaži rezervaciju: obriši Zoom sastanak + kalendar event (oslobađa termin u
+ * freebusy) i označi rezervaciju kao otkazanu. Best-effort na eksterne servise.
+ */
+export async function cancelBooking(b: {
+  id: string
+  teacherId: string
+  zoomMeetingId: string | null
+  googleEventId: string | null
+}) {
+  if (b.zoomMeetingId) {
+    try {
+      await deleteZoomMeeting(b.zoomMeetingId)
+    } catch {
+      /* ignore */
+    }
+  }
+  if (b.googleEventId) {
+    const [teacher] = await db.select().from(teachers).where(eq(teachers.id, b.teacherId)).limit(1)
+    if (teacher) await deleteCalendarEvent(teacher, b.googleEventId)
+  }
+  await db.update(bookings).set({ status: 'canceled', canceledAt: new Date() }).where(eq(bookings.id, b.id))
+}
 
 // Radno vreme + trajanje časa (test vrednosti — kasnije konfigurabilno po nastavniku).
 const WORK_START = 7 // 07:00
@@ -127,6 +151,19 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
       return booking
     },
     { body: t.Object({ startAt: t.String(), endAt: t.String() }) },
+  )
+  // Otkaži svoju rezervaciju (student)
+  .delete(
+    '/:id',
+    async ({ params, user, status }) => {
+      const [b] = await db.select().from(bookings).where(eq(bookings.id, params.id)).limit(1)
+      if (!b) return status(404, { error: 'rezervacija ne postoji' })
+      if (b.studentId !== user.userId) return status(403, { error: 'nije tvoja rezervacija' })
+      if (b.status === 'canceled') return { ok: true }
+      await cancelBooking(b)
+      return { ok: true }
+    },
+    { params: t.Object({ id: t.String() }) },
   )
   // Moje rezervacije (student) — sa vremenom i Zoom linkom
   .get('/mine', async ({ user }) => {

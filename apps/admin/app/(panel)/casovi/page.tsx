@@ -78,6 +78,18 @@ export default function CasoviPage() {
     else toast.error('Google OAuth nije konfigurisan (GOOGLE_* env).')
   }
 
+  async function cancelBooking(id: string) {
+    const ok = await confirmDialog({ title: 'Otkazati rezervaciju?', message: 'Zoom poziv i upis u kalendar se brišu.', okLabel: 'Otkaži termin', tone: 'danger' })
+    if (!ok) return
+    const { error } = await api.admin.bookings({ id }).delete()
+    if (error) {
+      toast.error('Greška pri otkazivanju')
+      return
+    }
+    toast.success('Rezervacija otkazana')
+    await load()
+  }
+
   async function disconnectGoogle() {
     const ok = await confirmDialog({ title: 'Otkači Google kalendar?', message: 'Termini se više neće upisivati u kalendar (Zoom link i dalje radi).', okLabel: 'Otkači', tone: 'danger' })
     if (!ok) return
@@ -194,11 +206,16 @@ export default function CasoviPage() {
                     {b.startAt ? `${dayLabel(b.startAt)} · ${fmtTime(b.startAt)}` : ''}
                   </div>
                 </div>
-                {b.meetLink && (
-                  <a className="btn secondary" style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }} href={b.meetLink} target="_blank" rel="noreferrer">
-                    Zoom link
-                  </a>
-                )}
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  {b.meetLink && (
+                    <a className="btn secondary" style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }} href={b.meetLink} target="_blank" rel="noreferrer">
+                      Zoom link
+                    </a>
+                  )}
+                  <button className="btn ghost" style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem', color: 'var(--danger)' }} onClick={() => cancelBooking(b.id)}>
+                    Otkaži
+                  </button>
+                </div>
               </div>
             ))}
           </div>

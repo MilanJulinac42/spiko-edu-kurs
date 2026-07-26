@@ -13,6 +13,7 @@ import {
 } from '../../db/schema'
 import { getConsentUrl, isGoogleConfigured } from '../../services/google'
 import { isZoomConfigured } from '../../services/zoom'
+import { cancelBooking } from '../bookings'
 import { requireRole } from '../../middleware/requireRole'
 import {
   bunnyThumbnailUrl,
@@ -199,6 +200,17 @@ export const adminModule = new Elysia({ prefix: '/admin' })
       .where(eq(bookings.teacherId, teacher.id))
       .orderBy(asc(availabilitySlots.startAt))
   })
+  // Otkaži rezervaciju (admin)
+  .delete(
+    '/bookings/:id',
+    async ({ params, status }) => {
+      const [b] = await db.select().from(bookings).where(eq(bookings.id, params.id)).limit(1)
+      if (!b) return status(404, { error: 'rezervacija ne postoji' })
+      if (b.status !== 'canceled') await cancelBooking(b)
+      return { ok: true }
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
   /**
    * Pošalji nazad Bunny video-ready event-ove od `since` timestamp-a.
    * Admin client poll-uje ovo svakih ~20s i prikazuje toast po novom event-u.
