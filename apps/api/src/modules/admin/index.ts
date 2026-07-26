@@ -140,6 +140,33 @@ export const adminModule = new Elysia({ prefix: '/admin' })
     await db.update(teachers).set({ googleRefreshToken: null }).where(eq(teachers.profileId, user.userId))
     return { ok: true }
   })
+  // ---------- RADNO VREME (availability rules) ----------
+  .get('/availability-rules', async ({ user }) => {
+    const [teacher] = await db
+      .select({ rules: teachers.availabilityRules, slotMinutes: teachers.slotMinutes })
+      .from(teachers)
+      .where(eq(teachers.profileId, user.userId))
+      .limit(1)
+    return { rules: teacher?.rules ?? null, slotMinutes: teacher?.slotMinutes ?? 45 }
+  })
+  .patch(
+    '/availability-rules',
+    async ({ user, body }) => {
+      let [teacher] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.profileId, user.userId)).limit(1)
+      if (!teacher) {
+        ;[teacher] = await db.insert(teachers).values({ profileId: user.userId }).returning({ id: teachers.id })
+      }
+      await db
+        .update(teachers)
+        .set({
+          availabilityRules: body.rules as Record<string, Array<{ start: string; end: string }>>,
+          slotMinutes: body.slotMinutes,
+        })
+        .where(eq(teachers.id, teacher.id))
+      return { ok: true }
+    },
+    { body: t.Object({ rules: t.Unknown(), slotMinutes: t.Integer({ minimum: 15, maximum: 240 }) }) },
+  )
   // ---------- TERMINI (availability) ----------
   // Lista termina ovog nastavnika (svi statusi) + broj rezervacija.
   .get('/availability', async ({ user }) => {

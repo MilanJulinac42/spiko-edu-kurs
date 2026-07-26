@@ -174,6 +174,10 @@ export const teachers = pgTable('teachers', {
   languages: text('languages').array(),
   isActive: boolean('is_active').notNull().default(true),
   googleRefreshToken: text('google_refresh_token'),
+  /** Radno vreme po danu u nedelji (0=Ned..6=Sub) → lista opsega { start, end } "HH:MM". */
+  availabilityRules: jsonb('availability_rules').$type<Record<string, Array<{ start: string; end: string }>>>(),
+  /** Trajanje časa u minutima (default 45). */
+  slotMinutes: integer('slot_minutes').notNull().default(45),
   createdAt: createdAt(),
 })
 

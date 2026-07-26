@@ -172,12 +172,11 @@ export default function CasoviPage() {
 
       {/* Kako radi (freebusy) */}
       <section style={{ ...cardBase, padding: '1.15rem', marginBottom: '1.5rem' }}>
-        <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Slobodni termini se računaju automatski</strong>
+        <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Kako se računaju slobodni termini</strong>
         <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-soft)', lineHeight: 1.6 }}>
-          Polaznici vide slobodne termine na osnovu <strong>tvog Google kalendara</strong> — radno vreme
-          <strong> 07:00–19:00</strong>, časovi <strong>45 min</strong>. Sve što je već zauzeto u kalendaru se
-          automatski izuzima. Da blokiraš neko vreme, samo ga zauzmi u Google kalendaru (npr. „Zauzeto"). Ne
-          moraš ništa ručno da unosiš ovde.
+          Polaznici vide slobodne termine na osnovu <strong>radnog vremena</strong> (dole) iz kog se automatski
+          izuzima sve što je zauzeto u <strong>tvom Google kalendaru</strong>. Da blokiraš neko vreme, samo ga
+          zauzmi u Google kalendaru (npr. „Zauzeto").
         </p>
         {!zoomReady && (
           <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: 'var(--danger)' }}>
@@ -190,6 +189,9 @@ export default function CasoviPage() {
           </p>
         )}
       </section>
+
+      {/* Radno vreme */}
+      <WeeklyHoursEditor />
 
       {/* Rezervacije */}
       <section>
@@ -329,6 +331,114 @@ function DatePicker({ value, onChange }: { value: string; onChange: (iso: string
         </div>
       )}
     </div>
+  )
+}
+
+type Range = { start: string; end: string }
+const DOW = [
+  { n: 1, l: 'Ponedeljak' },
+  { n: 2, l: 'Utorak' },
+  { n: 3, l: 'Sreda' },
+  { n: 4, l: 'Četvrtak' },
+  { n: 5, l: 'Petak' },
+  { n: 6, l: 'Subota' },
+  { n: 0, l: 'Nedelja' },
+]
+
+/** Editor radnog vremena po danima u nedelji + trajanje časa. */
+function WeeklyHoursEditor() {
+  const [rules, setRules] = useState<Record<string, Range[]>>({})
+  const [slotMin, setSlotMin] = useState(45)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await api.admin['availability-rules'].get()
+      const d = data as { rules: Record<string, Range[]> | null; slotMinutes: number } | null
+      setRules(d?.rules ?? Object.fromEntries([1, 2, 3, 4, 5].map((n) => [String(n), [{ start: '17:00', end: '21:00' }]])))
+      setSlotMin(d?.slotMinutes ?? 45)
+      setLoading(false)
+    })()
+  }, [])
+
+  const ranges = (n: number) => rules[String(n)] ?? []
+  const setDay = (n: number, rs: Range[]) =>
+    setRules((r) => {
+      const next = { ...r }
+      if (rs.length) next[String(n)] = rs
+      else delete next[String(n)]
+      return next
+    })
+
+  async function save() {
+    setSaving(true)
+    try {
+      const { error } = await api.admin['availability-rules'].patch({ rules, slotMinutes: slotMin })
+      if (error) throw new Error()
+      toast.success('Radno vreme sačuvano')
+    } catch {
+      toast.error('Greška pri čuvanju')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <section style={{ ...cardBase, padding: '1.15rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.85rem' }}>
+        <strong>Radno vreme</strong>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--ink-soft)' }}>Trajanje časa</span>
+          <select className="input" value={slotMin} onChange={(e) => setSlotMin(Number(e.target.value))} style={{ width: 100 }}>
+            <option value={30}>30 min</option>
+            <option value={45}>45 min</option>
+            <option value={60}>60 min</option>
+          </select>
+        </label>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        {DOW.map(({ n, l }) => {
+          const rs = ranges(n)
+          const active = rs.length > 0
+          return (
+            <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', minWidth: 150, cursor: 'pointer', paddingTop: '0.45rem' }}>
+                <input type="checkbox" checked={active} onChange={() => setDay(n, active ? [] : [{ start: '17:00', end: '21:00' }])} />
+                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{l}</span>
+              </label>
+              {!active ? (
+                <span style={{ color: 'var(--muted)', fontSize: '0.82rem', paddingTop: '0.5rem' }}>ne radi</span>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {rs.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <input className="input" type="time" value={r.start} onChange={(e) => setDay(n, rs.map((x, j) => (j === i ? { ...x, start: e.target.value } : x)))} style={{ width: 110 }} />
+                      <span>–</span>
+                      <input className="input" type="time" value={r.end} onChange={(e) => setDay(n, rs.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)))} style={{ width: 110 }} />
+                      <button className="btn ghost" style={{ padding: '0.2rem 0.45rem', color: 'var(--danger)' }} onClick={() => setDay(n, rs.filter((_, j) => j !== i))} title="Ukloni">×</button>
+                    </div>
+                  ))}
+                  <button className="btn ghost" style={{ alignSelf: 'flex-start', fontSize: '0.78rem', padding: '0.2rem 0.5rem' }} onClick={() => setDay(n, [...rs, { start: '17:00', end: '21:00' }])}>
+                    + Dodaj opseg
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <button className="btn" style={{ marginTop: '1rem' }} onClick={save} disabled={saving}>
+        {saving ? 'Čuvam…' : 'Sačuvaj radno vreme'}
+      </button>
+      <p style={{ margin: '0.6rem 0 0', fontSize: '0.75rem', color: 'var(--muted)' }}>
+        Iz ovog vremena se automatski izuzima sve što je zauzeto u tvom Google kalendaru.
+      </p>
+    </section>
   )
 }
 

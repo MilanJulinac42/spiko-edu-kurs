@@ -30,11 +30,21 @@ export async function cancelBooking(b: {
   await db.update(bookings).set({ status: 'canceled', canceledAt: new Date() }).where(eq(bookings.id, b.id))
 }
 
-// Radno vreme + trajanje časa (test vrednosti — kasnije konfigurabilno po nastavniku).
-const WORK_START = 7 // 07:00
-const WORK_END = 19 // 19:00
-const SLOT_MIN = 45 // trajanje časa
 const DAYS_AHEAD = 14 // koliko dana unapred nudimo
+
+type Range = { start: string; end: string } // "HH:MM"
+type Rules = Record<string, Range[]> // ključ = dan u nedelji 0=Ned..6=Sub
+
+// Default ako nastavnik nije podesio radno vreme: svaki dan 07:00–19:00.
+const DEFAULT_RULES: Rules = Object.fromEntries(
+  [0, 1, 2, 3, 4, 5, 6].map((d) => [String(d), [{ start: '07:00', end: '19:00' }]]),
+)
+const DEFAULT_SLOT_MIN = 45
+
+const hmToMin = (hm: string) => {
+  const [h, m] = hm.split(':').map(Number)
+  return (h || 0) * 60 + (m || 0)
+}
 
 type Interval = { start: Date; end: Date }
 const overlaps = (aS: Date, aE: Date, b: Interval) => aS < b.end && b.start < aE
@@ -65,18 +75,25 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
       busy = []
     }
 
+    const rules: Rules = (teacher.availabilityRules as Rules) ?? DEFAULT_RULES
+    const slotMin = teacher.slotMinutes || DEFAULT_SLOT_MIN
+
     const slots: { startAt: string; endAt: string }[] = []
     for (let day = 0; day <= DAYS_AHEAD; day++) {
       const base = new Date(now)
       base.setDate(base.getDate() + day)
-      for (let hour = WORK_START; hour < WORK_END; hour++) {
-        const start = new Date(base)
-        start.setHours(hour, 0, 0, 0)
-        const end = new Date(start.getTime() + SLOT_MIN * 60000)
-        if (end.getHours() > WORK_END || (end.getHours() === WORK_END && end.getMinutes() > 0)) continue
-        if (start.getTime() <= now.getTime()) continue // prošlo / trenutni sat
-        if (busy.some((b) => overlaps(start, end, b))) continue
-        slots.push({ startAt: start.toISOString(), endAt: end.toISOString() })
+      const ranges = rules[String(base.getDay())] ?? []
+      for (const r of ranges) {
+        const rStart = hmToMin(r.start)
+        const rEnd = hmToMin(r.end)
+        for (let t = rStart; t + slotMin <= rEnd; t += slotMin) {
+          const start = new Date(base)
+          start.setHours(Math.floor(t / 60), t % 60, 0, 0)
+          const end = new Date(start.getTime() + slotMin * 60000)
+          if (start.getTime() <= now.getTime()) continue
+          if (busy.some((b) => overlaps(start, end, b))) continue
+          slots.push({ startAt: start.toISOString(), endAt: end.toISOString() })
+        }
       }
     }
     return { slots, googleConnected: true, zoomReady: isZoomConfigured() }
