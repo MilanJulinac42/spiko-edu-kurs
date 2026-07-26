@@ -163,8 +163,8 @@ export default function CasoviPage() {
         <strong style={{ display: 'block', marginBottom: '0.75rem' }}>Dodaj slobodan termin</strong>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label className="label" style={{ margin: 0 }}>
-            <span>Datum</span>
-            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <span>Datum (dd/mm/gggg)</span>
+            <DateField value={date} onChange={setDate} />
           </label>
           <label className="label" style={{ margin: 0 }}>
             <span>Početak</span>
@@ -273,6 +273,48 @@ export default function CasoviPage() {
         )}
       </section>
     </div>
+  )
+}
+
+/**
+ * Custom datum polje — uvek dd/mm/gggg, radi nezavisno od lokacije browsera.
+ * Interno drži tekst dok se kuca; `value`/`onChange` su u ISO formatu (yyyy-mm-dd).
+ */
+function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+  const isoToDMY = (iso: string) => {
+    const [y, m, d] = iso.split('-')
+    return y && m && d ? `${d}/${m}/${y}` : ''
+  }
+  const [text, setText] = useState(isoToDMY(value))
+  useEffect(() => {
+    setText(isoToDMY(value))
+  }, [value])
+
+  function handle(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8)
+    let out = digits
+    if (digits.length > 4) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+    else if (digits.length > 2) out = `${digits.slice(0, 2)}/${digits.slice(2)}`
+    setText(out)
+    if (digits.length === 8) {
+      const dd = digits.slice(0, 2)
+      const mm = digits.slice(2, 4)
+      const yyyy = digits.slice(4)
+      onChange(`${yyyy}-${mm}-${dd}`)
+    } else {
+      onChange('')
+    }
+  }
+
+  return (
+    <input
+      className="input"
+      inputMode="numeric"
+      placeholder="dd/mm/gggg"
+      value={text}
+      onChange={(e) => handle(e.target.value)}
+      style={{ width: 130 }}
+    />
   )
 }
 
