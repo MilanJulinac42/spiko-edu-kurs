@@ -51,9 +51,12 @@ export const googleAuthModule = new Elysia({ prefix: '/auth/google' }).get(
         .set({ googleRefreshToken: refreshToken })
         .where(eq(teachers.id, query.state))
       return page('Google kalendar povezan!', true)
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[google callback] error:', msg)
       set.status = 500
-      return page('Greška pri povezivanju sa Google-om', false)
+      // Privremeno prikaži pravu grešku radi dijagnoze
+      return page(`Greška: ${msg.slice(0, 300)}`, false)
     }
   },
   {
