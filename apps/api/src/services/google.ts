@@ -9,16 +9,42 @@ export function makeOAuthClient() {
   )
 }
 
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+const CALENDAR_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events', // pravljenje evenata
+  'https://www.googleapis.com/auth/calendar.readonly', // freebusy (kad je Ema zauzeta)
+]
 
 /** Consent URL — `state` nosi teacherId da callback zna čiji je token. */
 export function getConsentUrl(state: string): string {
   return makeOAuthClient().generateAuthUrl({
     access_type: 'offline', // daje refresh_token
     prompt: 'consent', // forsira refresh_token na svakom povezivanju
-    scope: [CALENDAR_SCOPE],
+    scope: CALENDAR_SCOPES,
     state,
   })
+}
+
+/** Vrati zauzete intervale iz Eminog primarnog kalendara (freebusy). */
+export async function getBusyIntervals(
+  teacher: { googleRefreshToken: string | null },
+  timeMin: Date,
+  timeMax: Date,
+): Promise<Array<{ start: Date; end: Date }>> {
+  if (!teacher.googleRefreshToken) return []
+  const oauth = makeOAuthClient()
+  oauth.setCredentials({ refresh_token: teacher.googleRefreshToken })
+  const calendar = google.calendar({ version: 'v3', auth: oauth })
+  const res = await calendar.freebusy.query({
+    requestBody: {
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      items: [{ id: 'primary' }],
+    },
+  })
+  const busy = res.data.calendars?.primary?.busy ?? []
+  return busy
+    .filter((b) => b.start && b.end)
+    .map((b) => ({ start: new Date(b.start!), end: new Date(b.end!) }))
 }
 
 /** Razmeni auth code za refresh token (posle Google redirect-a na callback). */

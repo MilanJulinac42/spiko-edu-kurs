@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Container } from '@/components/ui/Container'
 import { api } from '@/lib/api'
 
-type Slot = { id: string; startAt: string; endAt: string; status: string }
+type Slot = { startAt: string; endAt: string }
 type MyBooking = { id: string; status: string; meetLink: string | null; startAt: string | null; endAt: string | null }
 
 const DAYS = ['Nedelja', 'Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota']
@@ -30,10 +30,13 @@ export default function ZakazivanjePage() {
   const [selected, setSelected] = useState<Slot | null>(null)
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [available, setAvailable] = useState(true)
 
   const load = useCallback(async () => {
-    const [av, bk] = await Promise.all([api.bookings.availability.get(), api.bookings.mine.get()])
-    if (Array.isArray(av.data)) setSlots((av.data as Slot[]).filter((s) => s.status === 'open'))
+    const [av, bk] = await Promise.all([api.bookings.slots.get(), api.bookings.mine.get()])
+    const avd = av.data as { slots: Slot[]; googleConnected: boolean; zoomReady: boolean } | null
+    setSlots(avd?.slots ?? [])
+    setAvailable(!!avd?.googleConnected && !!avd?.zoomReady)
     if (Array.isArray(bk.data)) setMine(bk.data as MyBooking[])
     setLoading(false)
   }, [])
@@ -47,7 +50,7 @@ export default function ZakazivanjePage() {
     setBooking(true)
     setError(null)
     try {
-      const { error: apiErr } = await api.bookings.post({ slotId: selected.id })
+      const { error: apiErr } = await api.bookings.post({ startAt: selected.startAt, endAt: selected.endAt })
       if (apiErr) {
         const val = (apiErr as { value?: { error?: string } }).value
         throw new Error(val?.error ?? 'Rezervacija nije uspela')
@@ -122,8 +125,12 @@ export default function ZakazivanjePage() {
           ) : groups.size === 0 ? (
             <div className="rounded-2xl border border-ink/10 bg-white p-8 text-center shadow-soft">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-surface text-2xl">📅</div>
-              <p className="mt-3 font-semibold text-ink">Trenutno nema slobodnih termina</p>
-              <p className="mt-1 text-sm text-muted">Proveri kasnije — novi termini se dodaju redovno.</p>
+              <p className="mt-3 font-semibold text-ink">
+                {available ? 'Trenutno nema slobodnih termina' : 'Zakazivanje trenutno nije dostupno'}
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                {available ? 'Proveri kasnije — termini se otvaraju redovno.' : 'Uskoro će biti moguće — pokušaj kasnije.'}
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -134,10 +141,10 @@ export default function ZakazivanjePage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {daySlots.map((s) => {
-                      const isSel = selected?.id === s.id
+                      const isSel = selected?.startAt === s.startAt
                       return (
                         <button
-                          key={s.id}
+                          key={s.startAt}
                           onClick={() => setSelected(isSel ? null : s)}
                           className={`rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
                             isSel

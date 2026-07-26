@@ -158,92 +158,24 @@ export default function CasoviPage() {
         <StatusChip ok={zoomReady} label={zoomReady ? 'Zoom spreman' : 'Zoom nije podešen'} />
       </div>
 
-      {/* Dodaj termin */}
+      {/* Kako radi (freebusy) */}
       <section style={{ ...cardBase, padding: '1.15rem', marginBottom: '1.5rem' }}>
-        <strong style={{ display: 'block', marginBottom: '0.75rem' }}>Dodaj slobodan termin</strong>
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <label className="label" style={{ margin: 0 }}>
-            <span>Datum</span>
-            <DatePicker value={date} onChange={setDate} />
-          </label>
-          <label className="label" style={{ margin: 0 }}>
-            <span>Početak</span>
-            <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </label>
-          <label className="label" style={{ margin: 0 }}>
-            <span>Trajanje</span>
-            <select className="input" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
-              <option value={30}>30 min</option>
-              <option value={45}>45 min</option>
-              <option value={60}>60 min</option>
-            </select>
-          </label>
-          <button className="btn" onClick={addSlot} disabled={adding}>
-            {adding ? 'Dodajem…' : '+ Dodaj termin'}
-          </button>
-        </div>
+        <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Slobodni termini se računaju automatski</strong>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink-soft)', lineHeight: 1.6 }}>
+          Polaznici vide slobodne termine na osnovu <strong>tvog Google kalendara</strong> — radno vreme
+          <strong> 07:00–19:00</strong>, časovi <strong>45 min</strong>. Sve što je već zauzeto u kalendaru se
+          automatski izuzima. Da blokiraš neko vreme, samo ga zauzmi u Google kalendaru (npr. „Zauzeto"). Ne
+          moraš ništa ručno da unosiš ovde.
+        </p>
         {!zoomReady && (
           <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: 'var(--danger)' }}>
-            ⚠️ Zoom nije podešen — termini se mogu dodati, ali rezervacija neće raditi dok se ne unese ZOOM_* env.
+            ⚠️ Zoom nije podešen — rezervacija neće raditi dok se ne unese ZOOM_* env.
           </p>
         )}
-      </section>
-
-      {/* Slobodni termini */}
-      <section style={{ marginBottom: '2rem' }}>
-        <strong style={{ display: 'block', marginBottom: '0.75rem' }}>Termini</strong>
-        {loading ? (
-          <p style={{ color: 'var(--muted)' }}>Učitavanje…</p>
-        ) : groups.size === 0 ? (
-          <div style={{ ...cardBase, padding: '1.5rem', textAlign: 'center', color: 'var(--ink-soft)' }}>
-            Još nema termina. Dodaj prvi iznad.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {[...groups.entries()].map(([k, daySlots]) => (
-              <div key={k} style={{ ...cardBase, padding: '1rem 1.15rem' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-dark)', marginBottom: '0.6rem', textTransform: 'capitalize' }}>
-                  {dayLabel(daySlots[0].startAt)}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {daySlots.map((s) => {
-                    const booked = s.status === 'booked'
-                    return (
-                      <span
-                        key={s.id}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                          padding: '0.4rem 0.65rem',
-                          borderRadius: 999,
-                          fontSize: '0.82rem',
-                          fontWeight: 600,
-                          border: '1px solid',
-                          borderColor: booked ? 'var(--border)' : 'var(--primary)',
-                          background: booked ? 'var(--surface-2)' : 'var(--primary-soft)',
-                          color: booked ? 'var(--muted)' : 'var(--primary-dark)',
-                        }}
-                      >
-                        {fmtTime(s.startAt)}–{fmtTime(s.endAt)}
-                        {booked ? (
-                          <span style={{ fontSize: '0.68rem' }}>· rezervisano</span>
-                        ) : (
-                          <button
-                            onClick={() => deleteSlot(s.id)}
-                            title="Obriši termin"
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontWeight: 700, lineHeight: 1, padding: 0 }}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+        {!google.connected && google.configured && (
+          <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: 'var(--danger)' }}>
+            ⚠️ Google kalendar nije povezan — poveži ga gore da bi se termini prikazivali.
+          </p>
         )}
       </section>
 
