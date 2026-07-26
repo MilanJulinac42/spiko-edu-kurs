@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { toast } from '@/components/toast'
 import { confirmDialog } from '@/components/dialog'
@@ -163,8 +163,8 @@ export default function CasoviPage() {
         <strong style={{ display: 'block', marginBottom: '0.75rem' }}>Dodaj slobodan termin</strong>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <label className="label" style={{ margin: 0 }}>
-            <span>Datum (dd/mm/gggg)</span>
-            <DateField value={date} onChange={setDate} />
+            <span>Datum</span>
+            <DatePicker value={date} onChange={setDate} />
           </label>
           <label className="label" style={{ margin: 0 }}>
             <span>Početak</span>
@@ -276,45 +276,110 @@ export default function CasoviPage() {
   )
 }
 
-/**
- * Custom datum polje — uvek dd/mm/gggg, radi nezavisno od lokacije browsera.
- * Interno drži tekst dok se kuca; `value`/`onChange` su u ISO formatu (yyyy-mm-dd).
- */
-function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
-  const isoToDMY = (iso: string) => {
-    const [y, m, d] = iso.split('-')
-    return y && m && d ? `${d}/${m}/${y}` : ''
-  }
-  const [text, setText] = useState(isoToDMY(value))
-  useEffect(() => {
-    setText(isoToDMY(value))
-  }, [value])
+const MONTHS_FULL = ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar']
+const WEEK = ['Pon', 'Uto', 'Sre', 'Čet', 'Pet', 'Sub', 'Ned']
 
-  function handle(raw: string) {
-    const digits = raw.replace(/\D/g, '').slice(0, 8)
-    let out = digits
-    if (digits.length > 4) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
-    else if (digits.length > 2) out = `${digits.slice(0, 2)}/${digits.slice(2)}`
-    setText(out)
-    if (digits.length === 8) {
-      const dd = digits.slice(0, 2)
-      const mm = digits.slice(2, 4)
-      const yyyy = digits.slice(4)
-      onChange(`${yyyy}-${mm}-${dd}`)
-    } else {
-      onChange('')
+function toISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function fmtDMY(d: Date) {
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
+/**
+ * Datum picker sa kalendarom (popup) — prikaz dd/mm/gggg. Klik na dan bira,
+ * prošli dani su onemogućeni. `value`/`onChange` u ISO formatu (yyyy-mm-dd).
+ */
+function DatePicker({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = value ? new Date(`${value}T00:00:00`) : null
+  const [view, setView] = useState<Date>(() => selected ?? new Date())
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-  }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [open])
+
+  const y = view.getFullYear()
+  const m = view.getMonth()
+  const startOffset = (new Date(y, m, 1).getDay() + 6) % 7 // ponedeljak prvi
+  const daysInMonth = new Date(y, m + 1, 0).getDate()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const cells: (Date | null)[] = []
+  for (let i = 0; i < startOffset; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, m, d))
 
   return (
-    <input
-      className="input"
-      inputMode="numeric"
-      placeholder="dd/mm/gggg"
-      value={text}
-      onChange={(e) => handle(e.target.value)}
-      style={{ width: 130 }}
-    />
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="input"
+        onClick={() => setOpen((o) => !o)}
+        style={{ width: 160, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}
+      >
+        <span style={{ color: selected ? 'var(--ink)' : 'var(--muted)' }}>{selected ? fmtDMY(selected) : 'dd/mm/gggg'}</span>
+        <span aria-hidden>📅</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 60,
+            top: 'calc(100% + 6px)',
+            left: 0,
+            width: 268,
+            background: 'var(--panel)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            boxShadow: 'var(--shadow-lift)',
+            padding: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+            <button type="button" className="btn ghost" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setView(new Date(y, m - 1, 1))}>‹</button>
+            <strong style={{ fontSize: '0.85rem' }}>{MONTHS_FULL[m]} {y}</strong>
+            <button type="button" className="btn ghost" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setView(new Date(y, m + 1, 1))}>›</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, fontSize: '0.68rem', color: 'var(--muted)', textAlign: 'center', marginBottom: 4 }}>
+            {WEEK.map((d) => <div key={d}>{d}</div>)}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+            {cells.map((c, i) => {
+              if (!c) return <div key={i} />
+              const past = c < today
+              const isSel = !!selected && c.getTime() === selected.getTime()
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={past}
+                  onClick={() => { onChange(toISO(c)); setOpen(false) }}
+                  style={{
+                    padding: '0.4rem 0',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: past ? 'not-allowed' : 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: isSel ? 700 : 400,
+                    background: isSel ? 'var(--primary)' : 'transparent',
+                    color: isSel ? 'var(--ink)' : 'var(--ink)',
+                    opacity: past ? 0.35 : 1,
+                  }}
+                >
+                  {c.getDate()}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
