@@ -99,6 +99,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
         )}
       </div>
 
+      {params.get('reason') === 'drugi-uredjaj' && !error && (
+        <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Odjava sa ovog uređaja — nalog je otvoren na drugom uređaju. Nalog može
+          da koristi ograničen broj uređaja. Prijavi se ponovo da nastaviš.
+        </div>
+      )}
+
       {error && (
         <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}

@@ -244,6 +244,27 @@ export const aiConversations = pgTable('ai_conversations', {
   createdAt: createdAt(),
 })
 
+// ---------- ACTIVE SESSIONS (anti password-sharing) ----------
+// Prati aktivne Supabase sesije po korisniku. Limit uređaja (MAX_ACTIVE_SESSIONS):
+// nova sesija preko limita → najstarija se `revoked=true` → izbačena na sledećem zahtevu.
+export const userSessions = pgTable(
+  'user_sessions',
+  {
+    id: id(),
+    userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+    /** Supabase JWT `session_id` claim — stabilan kroz refresh, nov po loginu. */
+    sessionId: text('session_id').notNull(),
+    /** Kratak opis uređaja (user-agent sažetak) za prikaz. */
+    deviceInfo: text('device_info'),
+    revoked: boolean('revoked').notNull().default(false),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    sessionUnique: uniqueIndex('user_sessions_session_id_unique').on(t.sessionId),
+  }),
+)
+
 export const aiMessages = pgTable('ai_messages', {
   id: id(),
   conversationId: uuid('conversation_id').notNull().references(() => aiConversations.id, { onDelete: 'cascade' }),

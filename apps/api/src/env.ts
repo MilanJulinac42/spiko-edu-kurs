@@ -38,6 +38,11 @@ const EnvSchema = t.Object({
   OPENAI_API_KEY: t.String({ default: '' }),
   OPENAI_MODEL: t.String({ default: 'gpt-4o-mini' }),
 
+  // Anti password-sharing: max broj aktivnih uređaja/sesija po nalogu.
+  // 1 = jedna sesija (najstroze), 2 = telefon+laptop (default). Nova preko limita
+  // izbaci najstariju. Prazno/0 = isključeno (bez ograničenja).
+  MAX_ACTIVE_SESSIONS: t.String({ default: '2' }),
+
   EMAIL_API_KEY: t.String(),
   EMAIL_FROM: t.String(),
 })
