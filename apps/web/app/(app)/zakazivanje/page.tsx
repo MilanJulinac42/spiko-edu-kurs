@@ -214,7 +214,7 @@ export default function ZakazivanjePage() {
                             : 'border-ink/15 bg-white text-ink/80 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/5'
                         }`}
                       >
-                        {fmtTime(s.startAt)}
+                        {fmtTime(s.startAt)}–{fmtTime(s.endAt)}
                       </button>
                     )
                   })}

@@ -96,6 +96,7 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
         }
       }
     }
+    slots.sort((a, b) => (a.startAt < b.startAt ? -1 : a.startAt > b.startAt ? 1 : 0)) // hronološki (ISO se sortira leksikografski)
     return { slots, googleConnected: true, zoomReady: isZoomConfigured() }
   })
   // ---------- REZERVIŠI (freebusy: startAt/endAt) ----------
