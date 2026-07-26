@@ -2,12 +2,14 @@ import Elysia, { t } from 'elysia'
 import { and, eq, gte } from 'drizzle-orm'
 import { db } from '../../db/client'
 import { availabilitySlots, bookings, teachers } from '../../db/schema'
-import { entitlement } from '../../middleware/entitlement'
+import { auth } from '../../middleware/auth'
 import { createCalendarEvent } from '../../services/google'
 import { createZoomMeeting, isZoomConfigured } from '../../services/zoom'
 
+// NAPOMENA: zakazivanje je za sad otvoreno svakom ulogovanom polazniku (auth).
+// Kad krene naplata (Raiffeisen), vratiti `entitlement` da traži aktivnu pretplatu.
 export const bookingsModule = new Elysia({ prefix: '/bookings' })
-  .use(entitlement)
+  .use(auth)
   .get('/availability', async ({ query }) => {
     const teacherId = query.teacherId
     return db
@@ -104,3 +106,18 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
       body: t.Object({ slotId: t.String() }),
     },
   )
+  // Moje rezervacije (student) — sa vremenom i Zoom linkom
+  .get('/mine', async ({ user }) => {
+    return db
+      .select({
+        id: bookings.id,
+        status: bookings.status,
+        meetLink: bookings.meetLink,
+        startAt: availabilitySlots.startAt,
+        endAt: availabilitySlots.endAt,
+      })
+      .from(bookings)
+      .leftJoin(availabilitySlots, eq(availabilitySlots.id, bookings.slotId))
+      .where(eq(bookings.studentId, user.userId))
+      .orderBy(availabilitySlots.startAt)
+  })

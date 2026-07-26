@@ -16,6 +16,7 @@ const authedLinks = [
   { href: '/dashboard', label: 'Moji kursevi' },
   { href: '/progress', label: 'Napredak' },
   { href: '/ponavljanje', label: 'Ponavljanje' },
+  { href: '/zakazivanje', label: 'Zakaži čas' },
   { href: '/settings', label: 'Profil' },
 ]
 
