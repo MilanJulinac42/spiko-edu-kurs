@@ -1,28 +1,32 @@
 /**
  * Podaci o trgovcu (merchant) — jedno mesto za sve pravne stranice i footer.
  *
- * ⚠️ POPUNI PRE GO-LIVE: vrednosti u [ZAGRADAMA] su placeholder-i. Kad Spiko
- * dobije zvanične podatke (registracija firme + Raiffeisen merchant nalog),
- * zameni ih ovde — sve stranice se automatski ažuriraju.
+ * Zvanični podaci firme popunjeni (APR registracija). Jedino `vatRegistered`
+ * ostaje null (neutralna formulacija cena) dok se ne potvrdi PDV status —
+ * preduzetnik-paušalac obično NIJE u sistemu PDV-a.
  *
  * Raiffeisen merchant + srpski zakon (Zakon o zaštiti potrošača, ZZPL)
  * zahtevaju da identitet trgovca bude jasno vidljiv na sajtu.
  */
 export const MERCHANT = {
   /** Pun poslovni naziv (kako je registrovan u APR-u) */
-  legalName: '[PUN NAZIV FIRME]',
+  legalName: 'Ema Aliđukić PR Edukativni centar Spiko Bačka Palanka',
   /** Kraći / brand naziv koji korisnici vide */
   brandName: 'Spiko Edu',
+  /** Pravna forma */
+  legalForm: 'Preduzetnik',
+  /** Osoba koja zastupa */
+  representative: 'Ema Aliđukić',
   /** Poreski identifikacioni broj */
-  pib: '[PIB]',
+  pib: '115275004',
   /** Matični broj (APR) */
-  registrationNumber: '[MATIČNI BROJ]',
+  registrationNumber: '68237190',
   /** Adresa sedišta */
-  address: 'Vase Stajića 2a/10, Bačka Palanka',
+  address: 'Vase Stajića 2a, Bačka Palanka',
   /** Grad + poštanski broj */
   city: '21400 Bačka Palanka, Srbija',
   /** Tekući račun (za uplate / povraćaj) */
-  bankAccount: '[TEKUĆI RAČUN]',
+  bankAccount: '265-1100310100163-66',
   /** Banka */
   bank: 'Raiffeisen banka a.d. Beograd',
   /** Kontakt email */
