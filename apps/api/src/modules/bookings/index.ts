@@ -46,6 +46,33 @@ const hmToMin = (hm: string) => {
   return (h || 0) * 60 + (m || 0)
 }
 
+// Sve vreme se računa u beogradskoj zoni (server je UTC — bez ovoga se satnica pomeri).
+const TZ = 'Europe/Belgrade'
+const WD: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+
+/** Kalendarski datum + dan u nedelji u beogradskoj zoni za dati instant. */
+function belgradeParts(instant: Date): { y: number; mo0: number; d: number; weekday: number } {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+  const p: Record<string, string> = {}
+  for (const x of dtf.formatToParts(instant)) p[x.type] = x.value
+  return { y: +p.year, mo0: +p.month - 1, d: +p.day, weekday: WD[p.weekday] ?? 0 }
+}
+
+/** Beogradsko „zidno" vreme (y-mo-d h:mi) → tačan UTC instant (DST-svesno). */
+function fromBelgrade(y: number, mo0: number, d: number, h: number, mi: number): Date {
+  const guess = new Date(Date.UTC(y, mo0, d, h, mi))
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+  const p: Record<string, string> = {}
+  for (const x of dtf.formatToParts(guess)) p[x.type] = x.value
+  const hh = p.hour === '24' ? 0 : +p.hour
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, hh, +p.minute, +p.second)
+  return new Date(guess.getTime() - (asUTC - guess.getTime()))
+}
+
 type Interval = { start: Date; end: Date }
 const overlaps = (aS: Date, aE: Date, b: Interval) => aS < b.end && b.start < aE
 
@@ -80,15 +107,13 @@ export const bookingsModule = new Elysia({ prefix: '/bookings' })
 
     const slots: { startAt: string; endAt: string }[] = []
     for (let day = 0; day <= DAYS_AHEAD; day++) {
-      const base = new Date(now)
-      base.setDate(base.getDate() + day)
-      const ranges = rules[String(base.getDay())] ?? []
+      const bp = belgradeParts(new Date(now.getTime() + day * 86400000))
+      const ranges = rules[String(bp.weekday)] ?? []
       for (const r of ranges) {
         const rStart = hmToMin(r.start)
         const rEnd = hmToMin(r.end)
         for (let t = rStart; t + slotMin <= rEnd; t += slotMin) {
-          const start = new Date(base)
-          start.setHours(Math.floor(t / 60), t % 60, 0, 0)
+          const start = fromBelgrade(bp.y, bp.mo0, bp.d, Math.floor(t / 60), t % 60)
           const end = new Date(start.getTime() + slotMin * 60000)
           if (start.getTime() <= now.getTime()) continue
           if (busy.some((b) => overlaps(start, end, b))) continue
