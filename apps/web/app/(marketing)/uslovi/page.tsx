@@ -62,11 +62,39 @@ export default function TermsPage() {
                     : '. Iznos poreza (ako je primenjiv) biće jasno iskazan pri plaćanju.'}
               </li>
               <li>Plaćanje se vrši platnim karticama preko sigurnog servisa {MERCHANT.bank}. Detalji su u <Link href="/placanje">Uslovima kupovine i plaćanja</Link>.</li>
-              <li>Pretplatu možeš da otkažeš u bilo kom trenutku iz svog profila; pristup ostaje aktivan do isteka plaćenog perioda.</li>
             </ul>
           </Section>
 
-          <Section title="4. Isporuka usluge">
+          <Section title="4. Automatska obnova pretplate">
+            <p>
+              Mesečni i godišnji planovi su <strong>ponavljajući</strong>: pretplata
+              se automatski obnavlja na kraju svakog obračunskog perioda (mesečno
+              odnosno godišnje), za iznos izabranog plana sa stranice{' '}
+              <Link href="/cenovnik">Cenovnik</Link>, sve dok je ne otkažeš.
+            </p>
+            <ul>
+              <li>Pri prvoj uplati daješ izričitu saglasnost da {MERCHANT.bank} bezbedno sačuva token tvoje kartice i da se buduće naplate izvršavaju automatski. <strong>{MERCHANT.brandName} ne čuva podatke o kartici.</strong></li>
+              <li>Naplata sledećeg perioda vrši se automatski na dan obnove; potvrdu dobijaš na email.</li>
+              <li>Ako naplata ne uspe (nedovoljno sredstava, istekla kartica), pokušavamo ponovo i obaveštavamo te emailom; do uspešne naplate pristup može biti privremeno pauziran.</li>
+              <li><strong>Lifetime</strong> plan je jednokratan i ne obnavlja se.</li>
+            </ul>
+          </Section>
+
+          <Section title="5. Otkazivanje pretplate">
+            <p>
+              Pretplatu možeš da otkažeš <strong>u bilo kom trenutku</strong>, bez
+              navođenja razloga:
+            </p>
+            <ul>
+              <li>U aplikaciji: <strong>Profil → Pretplata → Otkaži pretplatu</strong>.</li>
+              <li>Otkazivanje sprečava sledeću automatsku naplatu. Da izbegneš naplatu narednog perioda, otkaži <strong>pre dana obnove</strong>.</li>
+              <li>Po otkazivanju <strong>pristup ostaje aktivan do isteka već plaćenog perioda</strong> — ne gubiš ono što si platio/la.</li>
+              <li>Za povraćaj već naplaćenog perioda važe uslovi iz tačke 7 (pravo na odustanak i povraćaj).</li>
+              <li>Ako ti treba pomoć oko otkazivanja, piši na <a href={`mailto:${MERCHANT.email}`}>{MERCHANT.email}</a>.</li>
+            </ul>
+          </Section>
+
+          <Section title="6. Isporuka usluge">
             <p>
               Pristup plaćenom sadržaju aktivira se <strong>automatski, odmah</strong>{' '}
               po uspešno realizovanoj uplati. Sadržaju pristupaš prijavom na svoj
@@ -74,7 +102,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="5. Pravo na odustanak i povraćaj">
+          <Section title="7. Pravo na odustanak i povraćaj">
             <p>
               Po Zakonu o zaštiti potrošača, potrošač ima pravo da odustane od
               ugovora zaključenog na daljinu u roku od 14 dana. Za{' '}
@@ -91,7 +119,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="6. Reklamacije">
+          <Section title="8. Reklamacije">
             <p>
               Prigovor na uslugu možeš da podneseš na{' '}
               <a href={`mailto:${MERCHANT.email}`}>{MERCHANT.email}</a> ili preko{' '}
@@ -102,7 +130,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="7. Pristup i korišćenje sadržaja">
+          <Section title="9. Pristup i korišćenje sadržaja">
             <ul>
               <li>Sadržaj (video lekcije, vežbe, materijali) je u vlasništvu {MERCHANT.brandName} i licenciran ti je za ličnu, nekomercijalnu upotrebu.</li>
               <li>Ne smeš da preuzimaš, kopiraš, deliš ili distribuiraš sadržaj drugima.</li>
@@ -110,7 +138,7 @@ export default function TermsPage() {
             </ul>
           </Section>
 
-          <Section title="8. AI asistent">
+          <Section title="10. AI asistent">
             <p>
               AI asistent (zasnovan na Anthropic Claude) pomaže oko jezičkih pitanja.
               Odgovori mogu povremeno biti netačni — proveri kritičnu informaciju kod
@@ -119,7 +147,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="9. Sadržaj korisnika">
+          <Section title="11. Sadržaj korisnika">
             <p>
               Komentari, beleške i bookmarka koje ostavljaš ostaju tvoji, ali nam
               daješ pravo da prikažemo komentare ostalim polaznicima. Nije dozvoljeno
@@ -129,14 +157,14 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="10. Suspendovanje ili gašenje naloga">
+          <Section title="12. Suspendovanje ili gašenje naloga">
             <p>
               Možemo suspendovati ili obrisati nalog u slučaju kršenja ovih uslova,
               prevare u plaćanju ili zloupotrebe sistema.
             </p>
           </Section>
 
-          <Section title="11. Odgovornost">
+          <Section title="13. Odgovornost">
             <p>
               Uslugu pružamo &quot;kao što jeste&quot;. Trudimo se da platforma radi
               besprekorno, ali ne garantujemo nesmetan rad u svakom trenutku. Naša
@@ -145,7 +173,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="12. Izmene uslova">
+          <Section title="14. Izmene uslova">
             <p>
               Ove uslove možemo izmeniti. Bitne izmene objavljujemo na ovoj stranici
               i, gde je moguće, obaveštavamo te unapred. Dalje korišćenje platforme
@@ -153,7 +181,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="13. Primenljivo pravo">
+          <Section title="15. Primenljivo pravo">
             <p>
               Ovi uslovi tumače se po pravu Republike Srbije. Sporove pokušavamo da
               rešimo mirno; ako ne uspemo, nadležan je stvarno nadležni sud prema
@@ -161,7 +189,7 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="14. Kontakt">
+          <Section title="16. Kontakt">
             <p>
               Pitanja oko uslova? Piši nam na{' '}
               <a href={`mailto:${MERCHANT.email}`}>{MERCHANT.email}</a> ili preko{' '}
