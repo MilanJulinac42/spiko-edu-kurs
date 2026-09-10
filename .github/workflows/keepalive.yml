@@ -1,0 +1,20 @@
+name: Supabase keep-alive
+
+# Supabase free tier auto-pauzira projekat posle 7 dana neaktivnosti baze.
+# Ovaj cron svaki dan pogodi /keepalive (koji radi `SELECT 1`) da baza ostane budna.
+# Ako API/baza ne odgovore, job pukne pa dobiješ email od GitHub-a.
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # svaki dan u 06:17 UTC (~08:17 Beograd)
+  workflow_dispatch: {} # ručno pokretanje iz Actions taba
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping keepalive
+        run: |
+          code=$(curl -s -o /tmp/body.txt -w "%{http_code}" --max-time 30 --retry 3 --retry-delay 10 https://api.spikoedu.rs/keepalive)
+          echo "HTTP $code — $(cat /tmp/body.txt)"
+          test "$code" = "200"

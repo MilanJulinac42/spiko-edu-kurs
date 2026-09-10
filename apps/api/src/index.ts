@@ -1,6 +1,8 @@
 import { cors } from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
+import { sql } from 'drizzle-orm'
 import { Elysia } from 'elysia'
+import { db } from './db/client'
 import { env, PORT } from './env'
 import { adminModule } from './modules/admin'
 import { aiModule } from './modules/ai'
@@ -67,6 +69,7 @@ export const app = new Elysia()
     const path = new URL(request.url).pathname
     if (path.startsWith('/admin')) return // admin podaci se ne keširaju
     if (path.startsWith('/health')) return
+    if (path.startsWith('/keepalive')) return
 
     // Real-time podaci — uvek revalidiraj sa serverom (browser može keširati ali mora pitati).
     // Ovi endpoint-i se osvežavaju često nakon user akcija (lesson complete, exercise submit),
@@ -80,6 +83,19 @@ export const app = new Elysia()
     set.headers['cache-control'] = 'private, max-age=10, must-revalidate'
   })
   .get('/health', () => ({ ok: true }))
+  /**
+   * Keep-alive: lagan upit ka bazi (`SELECT 1`) da Supabase free tier ne uđe u
+   * auto-pauzu posle 7 dana neaktivnosti. Zove ga GitHub Actions cron dnevno.
+   * Ne dira nijednu tabelu — samo drži konekciju „toplom".
+   */
+  .get('/keepalive', async ({ status }) => {
+    try {
+      await db.execute(sql`select 1`)
+      return { ok: true, db: true }
+    } catch {
+      return status(503, { ok: false, db: false })
+    }
+  })
   .use(authModule)
   .use(googleAuthModule)
   .use(notesModule)
