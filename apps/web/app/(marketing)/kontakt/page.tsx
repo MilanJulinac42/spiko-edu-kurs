@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     'Pošalji upit Spiko Edu školi jezika. Email, telefon i adresa u Bačkoj Palanci — javljamo se čim stignemo.',
 }
 
-const CONTACT_EMAIL = 'spikoedu@gmail.com'
+const CONTACT_EMAIL = 'spiko.edu@gmail.com'
 const CONTACT_TEL_DISPLAY = '+381 62 9611743'
 const CONTACT_TEL_RAW = '+381629611743'
 const CONTACT_ADDRESS = 'Vase Stajića 2a/10, Bačka Palanka'

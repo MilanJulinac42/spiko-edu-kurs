@@ -29,7 +29,7 @@ export const MERCHANT = {
   /** Banka */
   bank: 'Raiffeisen banka a.d. Beograd',
   /** Kontakt email */
-  email: 'spikoedu@gmail.com',
+  email: 'spiko.edu@gmail.com',
   /** Kontakt telefon */
   phone: '+381 62 9611743',
   /** Da li je trgovac u sistemu PDV-a — utiče na formulaciju cena */
